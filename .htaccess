@@ -1,0 +1,32 @@
+# =============================================================
+#  Clean (extension-less) URLs for .html files
+#  /lp  ->  serves /lp.html      (and /lp.html redirects to /lp)
+#  Works on Apache with mod_rewrite enabled.
+# =============================================================
+
+# Turn off Apache content-negotiation guessing; we do it explicitly below.
+Options +FollowSymLinks -MultiViews
+RewriteEngine On
+RewriteBase /
+
+# ---- 1) Canonical redirect: /page.html  ->  /page  (301) ----
+# Only fires for a real browser request that literally contains ".html"
+# (checks THE_REQUEST so internal rewrites in step 2 never loop).
+RewriteCond %{THE_REQUEST} \s/+([^?\s]+)\.html[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+# ---- 2) Internally serve /page from /page.html ----
+# Only when the request is not an existing file/dir AND page.html exists.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+RewriteRule ^(.+?)/?$ $1.html [L]
+
+# =============================================================
+#  IMPORTANT (WordPress sites):
+#  If this domain also runs WordPress, paste the block ABOVE
+#  the "# BEGIN WordPress" line in the existing .htaccess.
+#  The two conditions in step 2 (!-f, .html -f) make sure only
+#  real .html files are handled here; everything else falls
+#  through to the normal WordPress rules untouched.
+# =============================================================
