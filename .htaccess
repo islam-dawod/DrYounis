@@ -10,16 +10,13 @@ RewriteEngine On
 RewriteBase /
 
 # ---- 1) OLD WORDPRESS URLS -> NEW PAGES (301) --------------------------------
-# Core pages
-RewriteRule ^about/?$                         /about [R=301,L]
+# Only slugs that DIFFER from the new clean URLs are redirected here.
+# (/about and /instructions are served directly from about.html / instructions.html
+#  by the clean-URL rules below, so the old /about/ and /instructions/ keep working
+#  without a redirect loop.)
 RewriteRule ^contact-us/?$                     /contact [R=301,L]
-RewriteRule ^instructions/?$                   /instructions [R=301,L]
-
-# Implants -> dedicated implant page
 RewriteRule ^(dental-implant|zeraah)/?$        /treatment-implant [R=301,L]
-
-# All other old treatment/service pages -> treatments hub
-RewriteRule ^(taj|tarqe3|jeraha|khale3|white|whitening|lethah|lethah3elaj|jeob|clean|scaling-deep-cleaning|root|mouth|bruxism|qoshor|tarmem|inlay-onlay|7asho|tooth-removal|serviceshe|serviceshe)/?$ /treatments [R=301,L]
+RewriteRule ^(taj|tarqe3|jeraha|khale3|white|whitening|lethah|lethah3elaj|jeob|clean|scaling-deep-cleaning|root|mouth|bruxism|qoshor|tarmem|inlay-onlay|7asho|tooth-removal|serviceshe)/?$ /treatments [R=301,L]
 
 # ---- 2) Canonical: /page.html -> /page (301) --------------------------------
 RewriteCond %{THE_REQUEST} \s/+([^?\s]+)\.html[\s?] [NC]
@@ -30,6 +27,3 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{DOCUMENT_ROOT}/$1.html -f
 RewriteRule ^(.+?)/?$ $1.html [L]
-
-# ---- 4) Optional: 404 fallback to home (uncomment if desired) ----------------
-# ErrorDocument 404 /index.html
