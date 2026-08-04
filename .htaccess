@@ -6,6 +6,7 @@
 # =============================================================
 
 Options +FollowSymLinks -MultiViews
+DirectoryIndex index.html index.htm index.php
 RewriteEngine On
 RewriteBase /
 
