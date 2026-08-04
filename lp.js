@@ -89,3 +89,15 @@
     });
   }
 })();
+
+/* Exclusive FAQ accordion fallback (older Safari that ignores <details name>) */
+(function () {
+  var items = document.querySelectorAll('.faq-list details');
+  if (items.length < 2) return;
+  items.forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (!d.open) return;
+      items.forEach(function (o) { if (o !== d) o.open = false; });
+    });
+  });
+})();

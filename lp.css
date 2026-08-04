@@ -25,7 +25,7 @@ button,input,textarea{font:inherit}
 .site-header{
   position:sticky;top:0;z-index:60;
   background:rgba(255,255,255,.95);
-  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
   border-bottom:1px solid rgba(220,232,231,.9);
 }
 .header-row{height:88px;display:flex;align-items:center;gap:28px}
