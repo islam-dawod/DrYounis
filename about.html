@@ -579,7 +579,7 @@
 <option>אסתטיקה / ציפויים</option><option>הלבנת שיניים</option><option>טיפול שורש</option><option>ייעוץ כללי</option></select></div>
 <div class="field"><label for="time">זמן מועדף <span class="opt">(רשות)</span></label><input id="time" name="time" type="text" placeholder="למשל: בוקר / אחר הצהריים"></div>
 <div class="field"><label for="msg">הודעה קצרה <span class="opt">(רשות)</span></label><textarea id="msg" name="msg"></textarea></div>
-<label class="consent"><input type="checkbox" required> אני מאשר/ת יצירת קשר בנוגע לפנייתי בהתאם ל<a href="#">מדיניות הפרטיות</a>.</label>
+<label class="consent"><input type="checkbox" required> אני מאשר/ת כי קראתי את <a href="privacy.html">מדיניות הפרטיות</a> ו<a href="terms.html">תנאי השימוש</a>, ומסכים/ה כי Younis Clinic תיצור עמי קשר בהתאם לפרטים שמסרתי.</label>
 <button class="btn btn--primary" type="submit" style="width:100%">שלח בקשת תור</button>
 <div class="form-msg" id="formMsg">תודה! בקשתך התקבלה — ניצור איתך קשר בהקדם.</div></form></div></div></section></main>
 <footer class="site"><div class="container">
@@ -597,8 +597,8 @@
 <div class="foot-col"><h4>צרו קשר</h4><a href="tel:+972543345333" dir="ltr">+972 54-334-5333</a><a href="https://wa.me/972543345333">וואטסאפ</a><a href="mailto:info.younisclinic@gmail.com" dir="ltr">info.younisclinic@gmail.com</a></div>
 </div>
 <p class="disclaimer">המידע באתר זה מיועד לידע כללי בלבד; הוא אינו מהווה ייעוץ רפואי, אבחון או תחליף להתייעצות אישית עם רופא, ואינו יוצר יחסי רופא–מטופל. בכל שאלה רפואית או במקרה חירום, פנו לרופא המטפל או למוקד החירום <bdi>(101)</bdi>.</p>
-<div class="foot-bottom"><span>&copy; 2025 מרפאת שיניים ד״ר תחסין יונס. כל הזכויות שמורות.</span>
-<div class="links"><a href="#">מדיניות פרטיות</a><a href="#">הצהרת נגישות</a><a href="#">תנאי שימוש</a></div></div>
+<div class="foot-bottom"><span>&copy; 2026 מרפאת שיניים ד״ר תחסין יונס. כל הזכויות שמורות.</span>
+<div class="links"><a href="privacy.html">מדיניות פרטיות</a><a href="terms.html">תנאי שימוש</a><a href="accessibility.html">הצהרת נגישות</a><a href="cookies.html">מדיניות Cookies</a><a href="medical-disclaimer.html">דיסקליימר רפואי</a><a href="copyright.html">זכויות יוצרים</a></div></div>
 </div></footer>
 <a class="wa-float" href="https://wa.me/972543345333" aria-label="פנייה בוואטסאפ"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.4A10 10 0 1012 2zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.7 1.8c.1.2 0 .4-.1.5l-.3.4c-.1.2-.3.3-.1.6.1.3.7 1.1 1.4 1.7.9.8 1.7 1 2 1.2.2.1.4 0 .5-.1l.6-.7c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.1.1.6-.1 1z"/></svg></a>
 <nav class="mobile-bar" aria-label="פעולות מהירות">
@@ -652,4 +652,5 @@ if(toc.length){var secs=[].map.call(toc,function(a){return document.querySelecto
 addEventListener('scroll',function(){var y=scrollY+120,cur=null;secs.forEach(function(s){if(s.offsetTop<=y)cur=s.id});
 toc.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')==='#'+cur)});});}
 </script>
+<script src="cookie-consent.js" defer></script>
 </body></html>

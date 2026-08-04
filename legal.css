@@ -1,0 +1,72 @@
+/* Younis Clinic — shared styles for legal/info pages */
+:root{
+  --teal:#1AADAD;--teal-dark:#0B6F70;--charcoal:#231F20;--ink:#231F20;
+  --muted:#5f5b5c;--offwhite:#F7F7F5;--line:rgba(35,31,32,.12);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:'Heebo',Arial,system-ui,sans-serif;color:var(--ink);
+  background:#fff;line-height:1.75;font-size:17px;-webkit-font-smoothing:antialiased}
+img{max-width:100%;display:block}
+a{color:var(--teal-dark);text-decoration:none}
+a:hover{text-decoration:underline}
+.container{max-width:900px;margin:0 auto;padding:0 20px}
+:focus-visible{outline:3px solid var(--teal-dark);outline-offset:2px;border-radius:4px}
+.skip-link{position:absolute;right:-999px;top:8px;background:#fff;color:var(--teal-dark);
+  padding:10px 16px;border-radius:8px;z-index:100;font-weight:700}
+.skip-link:focus{right:8px}
+
+/* header */
+header.legal{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.legal-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  height:74px;max-width:1100px;margin:0 auto;padding:0 20px}
+.legal-nav .logo{height:52px;width:auto}
+.legal-nav nav{display:flex;gap:16px;flex-wrap:wrap}
+.legal-nav nav a{color:var(--charcoal);font-weight:600;font-size:.95rem}
+.legal-nav .cta{background:var(--teal);color:#04302f;padding:9px 18px;border-radius:999px;
+  font-weight:700;white-space:nowrap}
+@media(max-width:640px){.legal-nav nav{display:none}.legal-nav{height:64px}.legal-nav .logo{height:44px}}
+
+/* page hero */
+.page-head{background:linear-gradient(180deg,var(--offwhite),#fff);
+  padding:48px 0 34px;border-bottom:1px solid var(--line)}
+.breadcrumb{font-size:.85rem;color:var(--muted);margin-bottom:12px}
+.breadcrumb a{color:var(--muted)}
+.page-head h1{margin:0;font-size:clamp(1.8rem,4.5vw,2.6rem);color:var(--charcoal);line-height:1.15}
+.updated{margin:10px 0 0;color:var(--muted);font-size:.92rem}
+
+/* prose */
+.prose{padding:44px 0 64px}
+.prose h2{color:var(--charcoal);font-size:1.4rem;margin:34px 0 12px}
+.prose h2:first-child{margin-top:0}
+.prose h3{color:var(--charcoal);font-size:1.1rem;margin:22px 0 8px}
+.prose p{margin:0 0 14px;color:var(--ink)}
+.prose ul{margin:6px 0 18px;padding-inline-start:22px}
+.prose li{margin-bottom:8px}
+.prose a{font-weight:600}
+.note{background:var(--offwhite);border:1px solid var(--line);border-inline-start:4px solid var(--teal);
+  border-radius:12px;padding:18px 20px;margin:22px 0;color:var(--muted);font-size:.96rem}
+
+/* footer */
+footer.legal{background:var(--charcoal);color:rgba(255,255,255,.72);padding:44px 0 30px;margin-top:20px}
+footer.legal .container{max-width:1100px}
+.legal-foot-links{display:flex;flex-wrap:wrap;gap:16px 22px;margin-bottom:18px}
+.legal-foot-links a{color:rgba(255,255,255,.75);font-size:.92rem}
+.legal-foot-links a:hover{color:var(--teal)}
+.legal-contact{color:rgba(255,255,255,.6);font-size:.9rem;margin:0 0 14px;line-height:1.8}
+.legal-contact a{color:rgba(255,255,255,.8)}
+.legal-copy{border-top:1px solid rgba(255,255,255,.14);padding-top:18px;
+  color:rgba(255,255,255,.5);font-size:.84rem}
+
+/* cookie banner (built by cookie-consent.js) */
+#cookie-banner{position:fixed;inset-inline:14px;bottom:14px;z-index:90;max-width:560px;
+  margin-inline:auto;background:#fff;border:1px solid var(--line);border-radius:16px;
+  box-shadow:0 12px 40px rgba(0,0,0,.18);padding:18px 20px;display:none}
+#cookie-banner.show{display:block}
+#cookie-banner p{margin:0 0 12px;font-size:.92rem;color:var(--ink);line-height:1.6}
+#cookie-banner .cb-actions{display:flex;gap:10px;flex-wrap:wrap}
+#cookie-banner button,#cookie-banner a.cb-more{font-family:inherit;font-size:.9rem;font-weight:700;
+  border-radius:999px;padding:10px 20px;cursor:pointer;border:1px solid var(--line)}
+#cookie-banner .cb-accept{background:var(--teal);color:#04302f;border-color:var(--teal)}
+#cookie-banner a.cb-more{background:#fff;color:var(--charcoal);display:inline-flex;align-items:center}
