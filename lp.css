@@ -587,3 +587,50 @@ footer{padding:34px 0 88px;border-top:1px solid var(--line);background:#fff}
 /* Sticky mobile bar hide/show */
 .mobile-bar{transition:transform .25s ease}
 .mobile-bar.hidden{transform:translateY(110%)}
+
+/* ===================== v10: mobile optimization ===================== */
+/* Global: never allow horizontal scroll */
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,video,iframe{max-width:100%}
+
+/* Benefits strip (3 key advantages) */
+.benefits-section{background:#fff;padding:26px 0;border-bottom:1px solid var(--line)}
+.benefits-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.benefit{display:flex;align-items:center;gap:10px;justify-content:center;background:var(--mint);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.benefit .b-ico{color:var(--gold);font-size:18px;line-height:1}
+.benefit h3{margin:0;font-size:16px;color:var(--ink)}
+
+/* Consolidated doctor/about block */
+.doctor-about .kicker{margin-bottom:6px}
+.doctor-about h2{margin:0 0 12px}
+.doctor-about p{color:var(--muted);font-size:16px}
+.doctor-about .more-panel{margin-top:16px}
+
+/* Header: compact consult button visible on mobile */
+@media(max-width:820px){
+  .header-cta{display:inline-flex;min-height:38px;padding:0 13px;font-size:13px}
+}
+
+/* Mobile refinements */
+@media(max-width:620px){
+  .header-row{height:64px;gap:10px}
+  .brand img{width:100px;max-height:52px}
+  .header-cta{min-height:36px;padding:0 11px;font-size:12.5px}
+
+  .hero-grid{padding:34px 0 6px;gap:20px}
+  .hero h1{font-size:clamp(32px,8.6vw,38px);line-height:1.12}
+  .hero-intro{font-size:17px}
+  /* opening image: short 4:5, face at top, no crop of the head */
+  .doctor-cutout.doctor-photo{width:auto;height:320px;aspect-ratio:4/5;object-position:top center;border-width:5px}
+  .doctor-aura{width:300px;height:300px;bottom:20px}
+
+  .section{padding:56px 0}
+  .section-heading{margin-bottom:30px}
+  .section-heading h2,.doctor-about h2,.consultation h2{font-size:clamp(25px,6.8vw,30px)}
+  .benefits-grid{grid-template-columns:1fr;gap:10px}
+  .benefit{justify-content:flex-start}
+
+  .button{min-height:52px;font-size:16px}
+  .hero-actions{gap:10px}
+  .text-button{min-height:44px}
+}
