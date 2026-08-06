@@ -44,6 +44,7 @@ $labels = [
     'time'     => 'זמן מועדף',
     'msg'      => 'הודעה',
     'message'  => 'הודעה',
+    'source'   => 'מקור',
 ];
 
 $name  = clean($_POST['fname'] ?? ($_POST['name'] ?? ''));
@@ -54,6 +55,27 @@ if ($name === '' || $phone === '') {
     http_response_code(422);
     echo json_encode(['ok' => false, 'error' => 'missing_fields']);
     exit;
+}
+
+// ---- تخزين اللِّيد في الـCRM (ملف NDJSON محمي، لا يُرفع للمستودع) ----
+$lead = [
+    'id'       => date('YmdHis') . substr(md5(uniqid('', true)), 0, 6),
+    'ts'       => date('Y-m-d H:i'),
+    'name'     => $name,
+    'phone'    => $phone,
+    'email'    => clean($_POST['email'] ?? ''),
+    'interest' => clean($_POST['interest'] ?? ''),
+    'msg'      => clean($_POST['msg'] ?? ($_POST['message'] ?? '')),
+    'source'   => clean($_POST['source'] ?? ''),
+    'ip'       => $_SERVER['REMOTE_ADDR'] ?? '',
+];
+$crmDir = __DIR__ . '/crm/data';
+if (is_dir($crmDir) || @mkdir($crmDir, 0775, true)) {
+    @file_put_contents(
+        $crmDir . '/leads.ndjson',
+        json_encode($lead, JSON_UNESCAPED_UNICODE) . "\n",
+        FILE_APPEND | LOCK_EX
+    );
 }
 
 // بناء نص الرسالة من كل الحقول المُرسلة

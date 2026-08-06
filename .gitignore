@@ -8,3 +8,8 @@ desktop.ini
 # Logs / local leads backup (see send.php)
 leads.log
 *.log
+
+# CRM runtime data — customer PII + password hash. NEVER commit (public repo).
+crm/data/*
+!crm/data/.htaccess
+!crm/data/index.php
