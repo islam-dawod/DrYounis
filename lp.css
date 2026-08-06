@@ -656,3 +656,27 @@ img,svg,video,iframe{max-width:100%}
 @media(prefers-reduced-motion:reduce){
   .hero-actions .cta-wide,.hero-actions .cta-wide:hover,.hero-actions .cta-wide:active{animation:none}
 }
+
+/* Thank-you modal (v14) */
+.thanks-modal{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;
+  padding:20px;background:rgba(11,47,48,.55);backdrop-filter:blur(3px)}
+.thanks-modal.open{display:flex;animation:thanks-fade .25s ease}
+@keyframes thanks-fade{from{opacity:0}to{opacity:1}}
+.thanks-card{position:relative;width:min(420px,100%);background:#fff;border-radius:22px;
+  padding:44px 28px 30px;text-align:center;box-shadow:0 24px 70px rgba(8,45,46,.35);
+  animation:thanks-pop .38s cubic-bezier(.18,.9,.28,1.2)}
+@keyframes thanks-pop{from{opacity:0;transform:translateY(14px) scale(.94)}to{opacity:1;transform:none}}
+.thanks-close{position:absolute;top:12px;left:14px;width:34px;height:34px;border:0;border-radius:50%;
+  background:#f1f5f5;color:#0B6F70;font-size:1.4rem;line-height:1;cursor:pointer}
+.thanks-close:hover{background:#e2eeee}
+.thanks-photo{position:relative;width:120px;height:120px;margin:0 auto 18px}
+.thanks-photo img{width:120px;height:120px;border-radius:50%;object-fit:cover;object-position:top center;
+  border:4px solid #EFF8F7;box-shadow:0 8px 22px rgba(8,118,121,.22)}
+.thanks-check{position:absolute;bottom:-2px;inset-inline-end:-2px;width:40px;height:40px;border-radius:50%;
+  background:#22a06b;color:#fff;display:flex;align-items:center;justify-content:center;
+  border:3px solid #fff;box-shadow:0 4px 12px rgba(34,160,107,.45);animation:thanks-check-pop .5s .2s both cubic-bezier(.18,.9,.28,1.4)}
+.thanks-check svg{width:20px;height:20px}
+@keyframes thanks-check-pop{from{transform:scale(0)}to{transform:scale(1)}}
+.thanks-card h3{font-size:1.5rem;color:var(--teal-dark);margin:0 0 10px}
+.thanks-card p{color:#4a5a5a;line-height:1.7;margin:0 0 22px}
+.thanks-ok{min-width:150px}

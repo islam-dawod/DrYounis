@@ -19,6 +19,34 @@
   }
 
   /* Contact form (demo handler — connect to server/CRM before go-live) */
+  /* Thank-you modal */
+  var thanks = document.getElementById('thanksModal');
+  var lastFocus = null;
+  function openThanks() {
+    if (!thanks) return;
+    lastFocus = document.activeElement;
+    thanks.classList.add('open');
+    thanks.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    var ok = thanks.querySelector('.thanks-ok');
+    if (ok) ok.focus();
+  }
+  function closeThanks() {
+    if (!thanks) return;
+    thanks.classList.remove('open');
+    thanks.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  if (thanks) {
+    thanks.addEventListener('click', function (e) {
+      if (e.target === thanks || e.target.closest('.thanks-close') || e.target.closest('.thanks-ok')) closeThanks();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && thanks.classList.contains('open')) closeThanks();
+    });
+  }
+
   var form = document.querySelector('.contact-form');
   if (form) {
     form.addEventListener('submit', function (event) {
@@ -32,9 +60,10 @@
         .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
         .then(function (d) {
           if (d && d.ok) {
-            if (status) { status.textContent = 'תודה! הפרטים התקבלו — ניצור איתכם קשר בהקדם.'; status.style.color = 'var(--teal-dark)'; }
-            if (btn) btn.textContent = 'נשלח בהצלחה ✓';
+            if (status) status.textContent = '';
             form.reset();
+            if (btn) { btn.disabled = false; btn.textContent = orig; }
+            openThanks();
           } else { throw new Error(); }
         })
         .catch(function () {

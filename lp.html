@@ -291,6 +291,22 @@
     <img alt="">
   </div>
 
-  <script src="lp.js?v=13" defer></script>
+  <!-- Thank-you modal (shown after successful form submit) -->
+  <div class="thanks-modal" id="thanksModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="thanksTitle">
+    <div class="thanks-card" role="document">
+      <button class="thanks-close" type="button" aria-label="סגירה">×</button>
+      <div class="thanks-photo">
+        <img src="assets/images/doctor-portrait.jpg" alt="ד״ר תחסין יונס" width="120" height="120" decoding="async">
+        <span class="thanks-check" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </span>
+      </div>
+      <h3 id="thanksTitle">תודה על ההרשמה!</h3>
+      <p>פנייתכם התקבלה בהצלחה. צוות המרפאה של ד״ר תחסין יונס ייצור איתכם קשר בהקדם לתיאום פגישת הייעוץ.</p>
+      <button class="button thanks-ok" type="button">סגירה</button>
+    </div>
+  </div>
+
+  <script src="lp.js?v=14" defer></script>
 </body>
 </html>
