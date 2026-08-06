@@ -66,7 +66,7 @@ $lead = [
     'email'    => clean($_POST['email'] ?? ''),
     'interest' => clean($_POST['interest'] ?? ''),
     'msg'      => clean($_POST['msg'] ?? ($_POST['message'] ?? '')),
-    'source'   => clean($_POST['source'] ?? ''),
+    'source'   => clean($_POST['source'] ?? '') ?: 'אתר ראשי',
     'ip'       => $_SERVER['REMOTE_ADDR'] ?? '',
 ];
 $crmDir = __DIR__ . '/crm/data';
