@@ -634,3 +634,6 @@ img,svg,video,iframe{max-width:100%}
   .hero-actions{gap:10px}
   .text-button{min-height:44px}
 }
+
+.mobile-bar-single{grid-template-columns:1fr}
+.mobile-bar-single a{padding:15px 7px}
