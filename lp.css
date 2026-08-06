@@ -639,3 +639,20 @@ img,svg,video,iframe{max-width:100%}
 .mobile-bar-single a{padding:15px 7px}
 
 .contact-form .opt{color:var(--muted);font-weight:400;font-size:.85em}
+
+/* Hero CTA — gentle wiggle + pulse on touch/hover (v14) */
+.hero-actions .cta-wide{animation:cta-breathe 3.4s ease-in-out infinite}
+@keyframes cta-breathe{0%,100%{box-shadow:0 6px 18px rgba(8,118,121,.18)}50%{box-shadow:0 10px 30px rgba(26,173,173,.42)}}
+.hero-actions .cta-wide:hover,.hero-actions .cta-wide:focus-visible,.hero-actions .cta-wide:active{
+  animation:cta-wiggle .5s ease-in-out;transform:translateY(-2px) scale(1.03)}
+@keyframes cta-wiggle{
+  0%{transform:translateY(-2px) scale(1.03) rotate(0)}
+  20%{transform:translateY(-2px) scale(1.03) rotate(-1.6deg)}
+  40%{transform:translateY(-2px) scale(1.04) rotate(1.6deg)}
+  60%{transform:translateY(-2px) scale(1.03) rotate(-1deg)}
+  80%{transform:translateY(-2px) scale(1.04) rotate(.7deg)}
+  100%{transform:translateY(-2px) scale(1.03) rotate(0)}
+}
+@media(prefers-reduced-motion:reduce){
+  .hero-actions .cta-wide,.hero-actions .cta-wide:hover,.hero-actions .cta-wide:active{animation:none}
+}
