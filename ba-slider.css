@@ -10,9 +10,9 @@
   box-shadow:0 6px 20px rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center}
 .ba-nav:hover{background:#fff;border-color:#1AADAD;color:#0B6F70}
 .ba-nav:focus-visible{outline:3px solid #0B6F70;outline-offset:2px}
-/* RTL: "next/forward" glyph ‹ on the left, "previous/back" glyph › on the right */
-.ba-forward{left:-6px}
-.ba-back{right:-6px}
+/* Standard: ‹ previous on the left, › next on the right */
+.ba-back{left:-6px}
+.ba-forward{right:-6px}
 .ba-dots{display:flex;gap:9px;justify-content:center;margin-top:22px}
 .ba-dots button{width:10px;height:10px;border-radius:50%;border:0;background:rgba(35,31,32,.2);
   cursor:pointer;padding:0;transition:.2s}
@@ -21,6 +21,6 @@
   .ba-track{gap:0}
   .ba-track>.case{flex:0 0 100%;min-width:100%;scroll-snap-align:center}
   .ba-nav{top:30%;width:42px;height:42px;font-size:1.5rem}
-  .ba-forward{left:6px;right:auto}
-  .ba-back{right:6px;left:auto}
+  .ba-back{left:6px;right:auto}
+  .ba-forward{right:6px;left:auto}
 }
