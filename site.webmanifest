@@ -1,0 +1,13 @@
+{
+  "name": "מרפאת ד״ר תחסין יונס — Younis Clinic",
+  "short_name": "Younis Clinic",
+  "icons": [
+    { "src": "/favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "theme_color": "#0B6F70",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "lang": "he",
+  "dir": "rtl"
+}
