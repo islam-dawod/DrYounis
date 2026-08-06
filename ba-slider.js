@@ -1,4 +1,4 @@
-/* Younis Clinic — before/after carousel behavior (RTL-safe) */
+/* Younis Clinic — before/after carousel behavior (RTL-safe, 1–2 cards per view) */
 (function () {
   "use strict";
   function init(sl) {
@@ -20,6 +20,10 @@
     });
     var dots = Array.prototype.slice.call(dotsWrap.children);
 
+    function perView() {
+      var w = slides[0].getBoundingClientRect().width;
+      return Math.max(1, Math.round(vp.clientWidth / w));
+    }
     function current() {
       var mid = vp.getBoundingClientRect().left + vp.clientWidth / 2;
       var best = 0, bd = Infinity;
@@ -32,14 +36,14 @@
     }
     function goTo(i) {
       i = Math.max(0, Math.min(slides.length - 1, i));
-      slides[i].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      slides[i].scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
     }
     function update() {
       var c = current();
       dots.forEach(function (d, i) { d.classList.toggle("active", i === c); });
     }
-    if (prev) prev.addEventListener("click", function () { goTo(current() - 1); });
-    if (next) next.addEventListener("click", function () { goTo(current() + 1); });
+    if (prev) prev.addEventListener("click", function () { goTo(current() - perView()); });
+    if (next) next.addEventListener("click", function () { goTo(current() + perView()); });
     var raf;
     vp.addEventListener("scroll", function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(update); }, { passive: true });
     window.addEventListener("resize", update);
