@@ -6,7 +6,7 @@
   <meta name="description" content="ד״ר תחסין יונס — מומחה לשיקום הפה בחיפה. טיפול במקרים מורכבים, שתלים, כתרים ואסתטיקה דנטלית. דירוג 5.0 ב־MedReviews.">
   <title>ד״ר תחסין יונס | מומחה לשיקום הפה בחיפה</title>
   <link rel="preload" as="image" href="assets/images/doctor-portrait.jpg">
-  <link rel="stylesheet" href="lp.css?v=12">
+  <link rel="stylesheet" href="lp.css?v=13">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
@@ -257,11 +257,24 @@
             <a href="https://www.medreviews.co.il/provider/dr-tahsin-younis" target="_blank" rel="noopener noreferrer">דירוג 5.0 ב־MedReviews ←</a>
           </div>
         </div>
-        <form class="contact-form" action="#" method="post">
-          <label class="full">שם מלא<input type="text" name="name" autocomplete="name" required></label>
-          <label class="full">מספר טלפון<input type="tel" name="phone" autocomplete="tel" required></label>
-          <label class="full">נושא הפנייה (אופציונלי)<input type="text" name="subject"></label>
-          <label class="consent full"><input type="checkbox" required> אני מאשר/ת יצירת קשר בנוגע לפנייה.</label>
+        <form class="contact-form" id="lpForm" action="send.php" method="post" novalidate>
+          <input type="text" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+          <label class="full">שם מלא<input type="text" name="fname" autocomplete="name" required></label>
+          <label>מספר טלפון<input type="tel" name="phone" autocomplete="tel" dir="ltr" required></label>
+          <label>דוא״ל <span class="opt">(רשות)</span><input type="email" name="email" autocomplete="email" dir="ltr"></label>
+          <label class="full">טיפול שמעניין אתכם <span class="opt">(רשות)</span>
+            <select name="interest">
+              <option value="">בחרו טיפול…</option>
+              <option>שיקום הפה</option>
+              <option>השתלת שיניים</option>
+              <option>אסתטיקה / ציפויים</option>
+              <option>הלבנת שיניים</option>
+              <option>טיפול שורש</option>
+              <option>ייעוץ כללי</option>
+            </select>
+          </label>
+          <label class="full">הודעה קצרה <span class="opt">(רשות)</span><textarea name="msg" rows="3"></textarea></label>
+          <label class="consent full"><input type="checkbox" required> אני מאשר/ת שקראתי את <a href="privacy.html">מדיניות הפרטיות</a> ואת <a href="terms.html">תנאי השימוש</a> של Younis Clinic ומסכים/ה ליצירת קשר בהתאם לפרטים שמסרתי.</label>
           <button class="button full" type="submit">לתיאום פגישת ייעוץ</button>
           <p class="form-status full" aria-live="polite"></p>
         </form>
@@ -279,6 +292,6 @@
     <img alt="">
   </div>
 
-  <script src="lp.js?v=12" defer></script>
+  <script src="lp.js?v=13" defer></script>
 </body>
 </html>

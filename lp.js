@@ -24,8 +24,23 @@
     form.addEventListener('submit', function (event) {
       event.preventDefault();
       var status = form.querySelector('.form-status');
-      if (status) status.textContent = 'תודה! פנייתכם התקבלה, נחזור אליכם בהקדם לתיאום פגישת ייעוץ.';
-      form.reset();
+      var btn = form.querySelector('button[type=submit]');
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      var orig = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'שולח…'; }
+      fetch('send.php', { method: 'POST', body: new FormData(form) })
+        .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
+        .then(function (d) {
+          if (d && d.ok) {
+            if (status) { status.textContent = 'תודה! הפרטים התקבלו — ניצור איתכם קשר בהקדם.'; status.style.color = 'var(--teal-dark)'; }
+            if (btn) btn.textContent = 'נשלח בהצלחה ✓';
+            form.reset();
+          } else { throw new Error(); }
+        })
+        .catch(function () {
+          if (btn) { btn.disabled = false; btn.textContent = orig; }
+          if (status) { status.textContent = 'אירעה שגיאה בשליחה. אנא נסו שוב מאוחר יותר.'; status.style.color = '#b23'; }
+        });
     });
   }
 
