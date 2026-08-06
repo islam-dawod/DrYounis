@@ -8,6 +8,7 @@
   border-radius:50%;border:1px solid rgba(35,31,32,.16);background:rgba(255,255,255,.95);
   color:#231F20;font-size:1.8rem;line-height:1;cursor:pointer;
   box-shadow:0 6px 20px rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center}
+.ba-nav svg{width:22px;height:22px;display:block}
 .ba-nav:hover{background:#fff;border-color:#1AADAD;color:#0B6F70}
 .ba-nav:focus-visible{outline:3px solid #0B6F70;outline-offset:2px}
 /* Standard: ‹ previous on the left, › next on the right */
