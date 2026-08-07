@@ -30,6 +30,10 @@
     document.body.style.overflow = 'hidden';
     var ok = thanks.querySelector('.thanks-ok');
     if (ok) ok.focus();
+    // Google Ads conversion — fires when the thank-you popup is shown (successful registration)
+    if (typeof gtag === 'function') {
+      gtag('event', 'ads_conversion___1', {});
+    }
   }
   function closeThanks() {
     if (!thanks) return;
