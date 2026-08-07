@@ -8,16 +8,15 @@
 
 session_start();
 
-$DATA   = __DIR__ . '/data';
-$AUTH   = $DATA . '/auth.php';        // يُرجِع hash كلمة المرور
+require __DIR__ . '/store.php';
+$CFG    = is_file(__DIR__ . '/config.php') ? (include __DIR__ . '/config.php') : null;
+
+$DATA   = crm_data_dir();             // مجلد ثابت خارج مجلد النشر
 $LEADS  = $DATA . '/leads.ndjson';    // سطر JSON لكل ليد
 $STATUS = $DATA . '/status.json';     // { id: "new"|"contacted"|"done" }
 
-if (!is_dir($DATA)) @mkdir($DATA, 0775, true);
-
 /* ---------- أدوات ---------- */
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-function load_hash($f){ return is_file($f) ? (include $f) : null; }
 function load_leads($f){
     $out = [];
     if (is_file($f)) {
@@ -36,7 +35,6 @@ function save_status($f, $a){ @file_put_contents($f, json_encode($a, JSON_UNESCA
 function csrf(){ if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(16)); return $_SESSION['csrf']; }
 function csrf_ok(){ return isset($_POST['csrf'], $_SESSION['csrf']) && hash_equals($_SESSION['csrf'], $_POST['csrf']); }
 
-$hash    = load_hash($AUTH);
 $authed  = !empty($_SESSION['crm_auth']);
 
 /* ---------- تسجيل الخروج ---------- */
@@ -46,47 +44,18 @@ if (isset($_GET['logout'])) {
     header('Location: index.php'); exit;
 }
 
-/* ---------- إعداد كلمة المرور لأول مرة ---------- */
-if ($hash === null) {
-    $err = '';
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        if (!csrf_ok()) {
-            $err = 'انتهت صلاحية الجلسة، أعد المحاولة.';
-        } else {
-            $p1 = (string)($_POST['pw'] ?? '');
-            $p2 = (string)($_POST['pw2'] ?? '');
-            if (strlen($p1) < 8)      $err = 'الرجاء اختيار كلمة مرور من 8 أحرف على الأقل.';
-            elseif ($p1 !== $p2)      $err = 'كلمتا المرور غير متطابقتين.';
-            else {
-                $ok = @file_put_contents($AUTH, "<?php return " . var_export(password_hash($p1, PASSWORD_DEFAULT), true) . ";\n", LOCK_EX);
-                if ($ok === false) $err = 'تعذّر حفظ كلمة المرور (صلاحيات المجلد).';
-                else { $_SESSION['crm_auth'] = true; session_regenerate_id(true); header('Location: index.php'); exit; }
-            }
-        }
-    }
-    render_shell('הגדרת סיסמה', function () use ($err) { ?>
-        <h1>הגדרת סיסמת ניהול</h1>
-        <p class="sub">זו הכניסה הראשונה. בחרו סיסמה לניהול מערכת הפניות.</p>
-        <?php if ($err): ?><div class="err"><?= h($err) ?></div><?php endif; ?>
-        <form method="post" autocomplete="off">
-            <input type="hidden" name="csrf" value="<?= h(csrf()) ?>">
-            <label>סיסמה חדשה<input type="password" name="pw" required minlength="8"></label>
-            <label>אימות סיסמה<input type="password" name="pw2" required minlength="8"></label>
-            <button type="submit">שמירה והמשך</button>
-        </form>
-    <?php });
-    exit;
-}
-
-/* ---------- تسجيل الدخول ---------- */
+/* ---------- تسجيل الدخول (مستخدم/كلمة مرور ثابتان من config.php) ---------- */
 if (!$authed) {
     $err = '';
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        if (!csrf_ok())                              $err = 'انتهت صلاحية الجلسة، أعد المحاولة.';
-        elseif (password_verify((string)($_POST['pw'] ?? ''), $hash)) {
+        $u = (string)($_POST['user'] ?? '');
+        $p = (string)($_POST['pw'] ?? '');
+        if (!csrf_ok())                                        $err = 'انتهت صلاحية الجلسة، أعد المحاولة.';
+        elseif (!$CFG || !isset($CFG['user'], $CFG['hash']))   $err = 'שגיאת הגדרה בשרת.';
+        elseif (hash_equals((string)$CFG['user'], $u) && password_verify($p, (string)$CFG['hash'])) {
             $_SESSION['crm_auth'] = true; session_regenerate_id(true);
             header('Location: index.php'); exit;
-        } else $err = 'סיסמה שגויה.';
+        } else $err = 'שם משתמש או סיסמה שגויים.';
     }
     render_shell('כניסה', function () use ($err) { ?>
         <h1>כניסת ניהול</h1>
@@ -94,7 +63,8 @@ if (!$authed) {
         <?php if ($err): ?><div class="err"><?= h($err) ?></div><?php endif; ?>
         <form method="post" autocomplete="off">
             <input type="hidden" name="csrf" value="<?= h(csrf()) ?>">
-            <label>סיסמה<input type="password" name="pw" required autofocus></label>
+            <label>שם משתמש<input type="text" name="user" required autofocus autocomplete="username"></label>
+            <label>סיסמה<input type="password" name="pw" required autocomplete="current-password"></label>
             <button type="submit">כניסה</button>
         </form>
     <?php });

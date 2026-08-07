@@ -69,8 +69,10 @@ $lead = [
     'source'   => clean($_POST['source'] ?? '') ?: 'אתר ראשי',
     'ip'       => $_SERVER['REMOTE_ADDR'] ?? '',
 ];
-$crmDir = __DIR__ . '/crm/data';
-if (is_dir($crmDir) || @mkdir($crmDir, 0775, true)) {
+$storeHelper = __DIR__ . '/crm/store.php';
+if (is_file($storeHelper)) {
+    require_once $storeHelper;
+    $crmDir = crm_data_dir();
     @file_put_contents(
         $crmDir . '/leads.ndjson',
         json_encode($lead, JSON_UNESCAPED_UNICODE) . "\n",
