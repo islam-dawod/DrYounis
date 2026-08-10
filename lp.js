@@ -59,7 +59,7 @@
       var btn = form.querySelector('button[type=submit]');
       if (!form.checkValidity()) { form.reportValidity(); return; }
       var orig = btn ? btn.textContent : '';
-      if (btn) { btn.disabled = true; btn.textContent = 'שולח…'; }
+      if (btn) { btn.disabled = true; btn.textContent = 'שולחים את הפנייה…'; }
       fetch('send.php', { method: 'POST', body: new FormData(form) })
         .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
         .then(function (d) {
@@ -72,7 +72,7 @@
         })
         .catch(function () {
           if (btn) { btn.disabled = false; btn.textContent = orig; }
-          if (status) { status.textContent = 'אירעה שגיאה בשליחה. אנא נסו שוב מאוחר יותר.'; status.style.color = '#b23'; }
+          if (status) { status.innerHTML = 'לא הצלחנו לשלוח את הפנייה כעת. אפשר לנסות שוב, או לפנות אלינו בטלפון <a href="tel:0543345333" dir="ltr">054-334-5333</a> או ב־<a href="https://wa.me/972543345333" target="_blank" rel="noopener">WhatsApp</a>.'; status.style.color = '#b23'; }
         });
     });
   }
@@ -136,6 +136,15 @@
       if (e.target.matches('input, textarea, select')) setTimeout(function () { bar.classList.remove('hidden'); }, 150);
     });
   }
+
+  /* Call / WhatsApp click tracking (separate events) */
+  document.querySelectorAll('[data-track]').forEach(function (el) {
+    el.addEventListener('click', function () {
+      if (typeof gtag === 'function') {
+        gtag('event', el.getAttribute('data-track') === 'whatsapp' ? 'whatsapp_click' : 'call_click', { transport_type: 'beacon' });
+      }
+    });
+  });
 })();
 
 /* Exclusive FAQ accordion fallback (older Safari that ignores <details name>) */

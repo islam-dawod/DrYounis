@@ -45,6 +45,7 @@ $labels = [
     'msg'      => 'הודעה',
     'message'  => 'הודעה',
     'source'   => 'מקור',
+    'consent_version' => 'גרסת הסכמה',
 ];
 
 $name  = clean($_POST['fname'] ?? ($_POST['name'] ?? ''));
