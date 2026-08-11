@@ -16,12 +16,44 @@ RewriteBase /
 #  by the clean-URL rules below, so the old /about/ and /instructions/ keep working
 #  without a redirect loop.)
 RewriteRule ^contact-us/?$                     /contact [R=301,L]
-RewriteRule ^(dental-implant|zeraah)/?$        /treatment-implant [R=301,L]
-RewriteRule ^(taj|tarqe3|jeraha|khale3|white|whitening|lethah|lethah3elaj|jeob|clean|scaling-deep-cleaning|root|mouth|bruxism|qoshor|tarmem|inlay-onlay|7asho|tooth-removal|serviceshe)/?$ /treatments [R=301,L]
+RewriteRule ^dental-implant/?$                  /treatments/dental-implants [R=301,L]
+# Legacy treatment slugs -> approved nested English routes
+RewriteRule ^7asho/?$                           /treatments/filling [R=301,L]
+RewriteRule ^inlay-onlay/?$                      /treatments/inlay-onlay [R=301,L]
+RewriteRule ^tooth-removal/?$                    /treatments/tooth-extraction [R=301,L]
+RewriteRule ^(whitening)/?$                      /treatments/teeth-whitening [R=301,L]
+RewriteRule ^root/?$                             /treatments/root-canal [R=301,L]
+RewriteRule ^(lethah3elaj|scaling-deep-cleaning)/?$ /treatments/periodontal-treatment [R=301,L]
+RewriteRule ^qoshor/?$                           /treatments/veneers [R=301,L]
+RewriteRule ^mouth/?$                            /treatments/crowns-bridges [R=301,L]
+# Legacy patient-instruction slugs -> approved nested English routes
+RewriteRule ^zeraah/?$                           /instructions/dental-implant [R=301,L]
+RewriteRule ^khale3/?$                           /instructions/surgical-extraction [R=301,L]
+RewriteRule ^jeob/?$                             /instructions/sinus-lift [R=301,L]
+RewriteRule ^lethah/?$                           /instructions/periodontal-surgery [R=301,L]
+RewriteRule ^taj/?$                              /instructions/crown-lengthening [R=301,L]
+RewriteRule ^jeraha/?$                           /instructions/regenerative-surgery [R=301,L]
+RewriteRule ^tarqe3/?$                           /instructions/gum-graft [R=301,L]
+RewriteRule ^white/?$                            /instructions/whitening [R=301,L]
+RewriteRule ^tarmem/?$                           /instructions/removable-prosthesis [R=301,L]
+RewriteRule ^clean/?$                            /instructions/oral-hygiene [R=301,L]
+RewriteRule ^(bruxism|serviceshe)/?$             /treatments [R=301,L]
+# Old flat implant-instruction URL -> new canonical nested route
+RewriteRule ^instruction-implant/?$             /instructions/dental-implant [R=301,L]
 
 # ---- 2) Canonical: /page.html -> /page (301) --------------------------------
 RewriteCond %{THE_REQUEST} \s/+([^?\s]+)\.html[\s?] [NC]
 RewriteRule ^ /%1 [R=301,L]
+
+# ---- 2b) Approved NESTED routes -> flat page files (internal) ----------------
+# Main approved treatment pages (nested aliases)
+RewriteRule ^treatments/dental-implants/?$      /treatment-implant.html [L]
+RewriteRule ^treatments/crowns-bridges/?$       /treatment-crowns.html [L]
+RewriteRule ^treatments/full-mouth/?$           /treatment-full-mouth.html [L]
+# Additional treatment pages + veneers (flat file names match slug)
+RewriteRule ^treatments/([a-z0-9-]+)/?$         /treatment-$1.html [L]
+# Patient instruction pages
+RewriteRule ^instructions/([a-z0-9-]+)/?$       /instruction-$1.html [L]
 
 # ---- 3) Internally serve /page from /page.html ------------------------------
 RewriteCond %{REQUEST_FILENAME} !-f
