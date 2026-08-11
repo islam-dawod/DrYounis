@@ -54,6 +54,8 @@ RewriteRule ^treatments/full-mouth/?$           /treatment-full-mouth.html [L]
 RewriteRule ^treatments/([a-z0-9-]+)/?$         /treatment-$1.html [L]
 # Patient instruction pages
 RewriteRule ^instructions/([a-z0-9-]+)/?$       /instruction-$1.html [L]
+# Digital business card (short URL + future per-member alias)
+RewriteRule ^card/tahsin/?$                     /card.html [L]
 
 # ---- 3) Internally serve /page from /page.html ------------------------------
 RewriteCond %{REQUEST_FILENAME} !-f

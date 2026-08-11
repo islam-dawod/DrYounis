@@ -1,0 +1,11 @@
+BEGIN:VCARD
+VERSION:3.0
+N:Younis;Tahsin;;Dr.;
+FN:Dr. Tahsin Younis
+ORG:Younis Clinic
+TITLE:מומחה לשיקום הפה
+TEL;TYPE=CELL,VOICE:+972543345333
+EMAIL;TYPE=INTERNET:info.younisclinic@gmail.com
+URL:https://younisclinic.com
+ADR;TYPE=WORK:;;שדרות הנשיא 28;חיפה;;;Israel
+END:VCARD
