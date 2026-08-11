@@ -540,6 +540,19 @@
 .section.about .prof-grid{margin-top:34px}
 .section.about .prof-item p{color:#4a5a5a;line-height:1.7;margin:6px 0 0;font-size:14.5px}
 
+
+/* lecture photos in expertise + FAQ sections */
+.expertise-grid{display:grid;grid-template-columns:0.85fr 1fr;gap:38px;align-items:center}
+.faq-grid{display:grid;grid-template-columns:0.8fr 1fr;gap:38px;align-items:start}
+.expertise-grid .prose,.faq-grid .faq-list{max-width:none;margin:0}
+.side-photo{margin:0}
+.side-photo img{width:100%;height:100%;max-height:460px;object-fit:cover;border-radius:20px;box-shadow:0 16px 40px rgba(8,45,46,.16);display:block}
+.side-photo figcaption{margin-top:10px;text-align:center;color:#6a7a7a;font-size:13.5px}
+@media(max-width:900px){
+  .expertise-grid,.faq-grid{grid-template-columns:1fr;gap:24px}
+  .side-photo img{max-height:340px}
+}
+
 </style><link rel="stylesheet" href="ba-slider.css?v=5">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -599,6 +612,11 @@
   <div class="container">
     <div class="head center reveal"><div class="eyebrow"><span>מומחיות בשיקום הפה</span><svg class="sig" viewBox="0 0 100 16" aria-hidden="true"><path d="M4 11 C14 3 20 3 24 9 C27 13 32 13 37 7 C42 2 49 3 54 10 C58 15 66 14 72 8 C78 3 86 4 96 6"/></svg></div>
       <h2>בטיפול מורכב, כל החלטה משפיעה על השלב הבא</h2></div>
+    <div class="expertise-grid">
+      <figure class="side-photo reveal">
+        <img src="assets/images/lecture-rambam.jpg" alt="ד״ר תחסין יונס מרצה בכנס מקצועי ברמב״ם" width="1200" height="1200" loading="lazy" decoding="async">
+        <figcaption>ד״ר תחסין יונס בהרצאה מקצועית</figcaption>
+      </figure>
     <div class="prose reveal">
       <p>רק חלק קטן מרופאי השיניים בישראל מחזיקים בתואר מומחה לשיקום הפה. התואר ניתן לאחר מסלול התמחות קליני ואקדמי של כארבע שנים במוסד מוכר, הכולל טיפול במקרים מורכבים ורב־תחומיים, לימודים מעמיקים, סבבים מקצועיים ובחינות.</p>
       <p>ההכשרה מקנה למומחה ראייה רחבה של ההיבטים האסתטיים והתפקודיים, ויכולת לחבר בין אבחון, תכנון, ביצוע ומעקב. ד״ר יונס השלים את תוכנית ההתמחות בשיקום הפה באוניברסיטה העברית–הדסה וקיבל תעודת מומחה מטעם משרד הבריאות.</p>
@@ -606,6 +624,7 @@
       <p>תפקידו של המומחה לשיקום הפה הוא לרכז את התמונה הכוללת: לקבוע את מטרות השיקום, לבנות את סדר השלבים, לתאם בין התחומים והגורמים המטפלים וללוות את הביצוע, המעקב והתחזוקה — תוך תיאום ציפיות עם המטופל.</p>
       <p>עבורכם, המשמעות היא כתובת מקצועית אחת שרואה את התמונה המלאה, מסבירה מה צפוי ומלווה אתכם לאורך הדרך.</p>
       <div class="prose-cta"><a class="btn btn--ghost" href="about.html#meaning">מהו מומחה לשיקום הפה?</a></div>
+    </div>
     </div>
   </div>
 </section>
@@ -724,6 +743,11 @@
   <div class="container">
     <div class="head center reveal"><div class="eyebrow"><span>שאלות נפוצות</span><svg class="sig" viewBox="0 0 100 16" aria-hidden="true"><path d="M4 11 C14 3 20 3 24 9 C27 13 32 13 37 7 C42 2 49 3 54 10 C58 15 66 14 72 8 C78 3 86 4 96 6"/></svg></div>
       <h2>שאלות נפוצות</h2></div>
+    <div class="faq-grid">
+      <figure class="side-photo reveal">
+        <img src="assets/images/lecture-synergism.jpg" alt="ד״ר תחסין יונס מציג מקרים קליניים בכנס שיקום הפה" width="896" height="896" loading="lazy" decoding="async">
+        <figcaption>הצגת מקרים קליניים בכנס מקצועי</figcaption>
+      </figure>
     <div class="faq-list reveal">
       <details><summary>האם הטיפול כואב וכיצד דואגים לנוחות במהלכו?</summary><p>רוב הטיפולים מבוצעים תחת אלחוש מקומי, בקצב המותאם למטופל ותוך בדיקת הנוחות לאורך הטיפול. לאחר טיפולים מסוימים תיתכן רגישות או אי־נוחות זמנית, ותקבלו הנחיות ברורות להמשך.</p></details>
       <details><summary>האם ניתן לבצע השתלות או שיקום מורכב ביום אחד?</summary><p>במקרים מתאימים ניתן לבצע עקירות והשתלות באותו יום, ולעיתים להתאים שיקום זמני ביום הטיפול או בתוך 24 שעות. האפשרות תלויה במצב העצם והחניכיים, ביציבות השתלים ובמצב הרפואי הכללי, ונקבעת רק לאחר בדיקה ותכנון. השיקום הסופי מבוצע לאחר תקופת הריפוי הנדרשת.</p></details>
@@ -731,6 +755,7 @@
       <details><summary>למי מתאימים ציפויי חרסינה?</summary><p>ציפויי חרסינה יכולים להתאים לשיפור הצבע, הצורה והפרופורציות של השיניים ולסגירת רווחים מסוימים. ההתאמה נקבעת לאחר בדיקת השיניים, החניכיים והסגר, משום שלעתים טיפול אחר יהיה נכון ושמרני יותר.</p></details>
       <details><summary>מה כוללת פגישת הייעוץ והבדיקה?</summary><p>הפגישה כוללת שיחה על הציפיות שלכם, בדיקה יסודית של השיניים, החניכיים והסגר, והדגמה באמצעות סריקה תוך־פה וצילומים לפי הצורך. בסיום תבינו את אפשרויות הטיפול, החלופות, השלבים ומשך הטיפול הצפוי.</p></details>
       <details><summary>האם ניתן לראות מראש כיצד עשויה להיראות התוצאה?</summary><p>לאחר הסריקות והצילומים ניתן במקרים מתאימים להכין הדמיה דיגיטלית של התוצאה המתוכננת. לעיתים ניתן גם להדגים את התכנון בפה ולראות את כיוון התוצאה עוד לפני הכנת השיניים.</p></details>
+    </div>
     </div>
     <p class="faq-foot reveal">לא מצאתם תשובה לשאלה שלכם? השאירו פרטים ונחזור אליכם.</p>
   </div>
