@@ -72,7 +72,7 @@
         })
         .catch(function () {
           if (btn) { btn.disabled = false; btn.textContent = orig; }
-          if (status) { status.innerHTML = 'לא הצלחנו לשלוח את הפנייה כעת. אפשר לנסות שוב, או לפנות אלינו בטלפון <a href="tel:0543345333" dir="ltr">054-334-5333</a> או ב־<a href="https://wa.me/972543345333" target="_blank" rel="noopener">WhatsApp</a>.'; status.style.color = '#b23'; }
+          if (status) { status.textContent = 'לא הצלחנו לשלוח את הפנייה כעת. אנא נסו שוב מאוחר יותר.'; status.style.color = '#b23'; }
         });
     });
   }
