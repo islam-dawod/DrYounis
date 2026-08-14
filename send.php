@@ -58,6 +58,14 @@ if ($name === '' || $phone === '') {
     exit;
 }
 
+// تحقّق من صيغة رقم الهاتف (خادم): 7 أرقام على الأقل
+$phone_digits = preg_replace('/\D/', '', $phone);
+if (strlen($phone_digits) < 7) {
+    http_response_code(422);
+    echo json_encode(['ok' => false, 'error' => 'invalid_phone']);
+    exit;
+}
+
 // ---- تخزين اللِّيد في الـCRM (ملف NDJSON محمي، لا يُرفع للمستودع) ----
 $lead = [
     'id'       => date('YmdHis') . substr(md5(uniqid('', true)), 0, 6),

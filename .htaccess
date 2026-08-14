@@ -15,6 +15,8 @@ RewriteBase /
 # (/about and /instructions are served directly from about.html / instructions.html
 #  by the clean-URL rules below, so the old /about/ and /instructions/ keep working
 #  without a redirect loop.)
+# Consolidate home: /index and /index.html -> /
+RewriteRule ^index(\.html)?/?$                  / [R=301,L]
 RewriteRule ^contact-us/?$                     /contact [R=301,L]
 RewriteRule ^dental-implant/?$                  /treatments/dental-implants [R=301,L]
 # Legacy treatment slugs -> approved nested English routes
