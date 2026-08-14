@@ -97,10 +97,12 @@
   .qr p{color:var(--muted);font-size:.82rem;margin-top:8px}
   .foot{text-align:center;color:var(--muted);font-size:.72rem;padding:14px 10px 0}
   .foot a{color:var(--teal);text-decoration:none}
+.skip-link{position:absolute;top:-48px;inset-inline-start:0;z-index:200;background:#0B6F70;color:#fff;padding:10px 16px;border-radius:0 0 10px 0;transition:top .15s}.skip-link:focus{top:0}
 </style>
 </head>
 <body>
-<main class="card">
+  <a class="skip-link" href="#main">דלג לתוכן</a>
+<main class="card" id="main">
   <div class="panel">
 
     <!-- HERO -->
