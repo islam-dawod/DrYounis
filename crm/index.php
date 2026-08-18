@@ -92,12 +92,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $st = load_status($STATUS); unset($st[$id]); save_status($STATUS, $st);
         echo json_encode(['ok'=>true]); exit;
     }
+    if ($_POST['action'] === 'gads_genkey') {
+        $key = bin2hex(random_bytes(20));
+        @file_put_contents($DATA . '/gads_key.txt', $key, LOCK_EX);
+        echo json_encode(['ok'=>true, 'key'=>$key]); exit;
+    }
     echo json_encode(['ok'=>false]); exit;
 }
 
 $leads  = load_leads($LEADS);
 $status = load_status($STATUS);
 usort($leads, fn($a,$b) => strcmp($b['id'] ?? '', $a['id'] ?? '')); // الأحدث أولاً
+$gads_key = is_file($DATA . '/gads_key.txt') ? trim(file_get_contents($DATA . '/gads_key.txt')) : '';
+$gads_url = ((($_SERVER['HTTPS'] ?? '') === 'on') ? 'https' : 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'younisclinic.com') . '/crm/gads-webhook.php';
 
 /* ---------- تصدير CSV ---------- */
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
@@ -169,6 +176,15 @@ foreach ($leads as $l) {
   .empty{padding:50px 20px;text-align:center;color:var(--muted)}
   .src{font-size:.8rem;color:var(--muted)}
   @media(max-width:640px){.wrap{padding:12px}}
+  .gads{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:16px;padding:0 18px}
+  .gads summary{cursor:pointer;font-weight:700;color:var(--teal);padding:14px 0}
+  .gads-body{padding:0 0 16px}
+  .gads-body label{display:block;font-size:.8rem;color:var(--muted);margin:10px 0 4px}
+  .gads .cp{display:flex;gap:8px;align-items:center}
+  .gads code{flex:1;background:#f4f8f8;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:.86rem;word-break:break-all;direction:ltr;text-align:left}
+  .gads .cp button,.gads .gen{background:var(--teal);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:.85rem}
+  .gads .gen{margin-top:14px}
+  .gads-help{color:var(--muted);font-size:.82rem;line-height:1.6;margin-top:12px}
 </style>
 </head>
 <body>
@@ -183,6 +199,18 @@ foreach ($leads as $l) {
     <div class="stat"><b><?= $countToday ?></b><span>פניות היום</span></div>
     <div class="stat"><b><?= $countNew ?></b><span>ממתינות לטיפול</span></div>
   </div>
+
+  <details class="gads">
+    <summary>חיבור Google Ads (Webhook) — פרטים להדבקה במערכת Google Ads</summary>
+    <div class="gads-body">
+      <label>Webhook URL</label>
+      <div class="cp"><code id="gadsUrl"><?= h($gads_url) ?></code><button type="button" data-copy="gadsUrl">העתק</button></div>
+      <label>Key (מפתח)</label>
+      <div class="cp"><code id="gadsKey"><?= $gads_key !== '' ? h($gads_key) : '— טרם נוצר —' ?></code><button type="button" data-copy="gadsKey">העתק</button></div>
+      <button type="button" id="gadsGen" class="gen"><?= $gads_key !== '' ? 'יצירת מפתח חדש' : 'יצירת מפתח' ?></button>
+      <p class="gads-help">ב־Google Ads: נכס טופס לידים → אפשרויות מסירה (Delivery) → Webhook. הדביקו את ה־URL ואת ה־Key למעלה, ואז שלחו „Send test data”. הלידים יופיעו כאן אוטומטית.</p>
+    </div>
+  </details>
 
   <div class="toolbar">
     <input type="search" id="q" placeholder="חיפוש לפי שם / טלפון / דוא״ל / הודעה…">
@@ -235,6 +263,24 @@ foreach ($leads as $l) {
     return fetch('index.php', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams(data)})
       .then(function(r){return r.json();});
   }
+  // Google Ads webhook: generate key + copy
+  document.querySelectorAll('[data-copy]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var t=document.getElementById(b.getAttribute('data-copy'));
+      navigator.clipboard.writeText(t.textContent.trim()).then(function(){b.textContent='הועתק ✓';setTimeout(function(){b.textContent='העתק';},1500);});
+    });
+  });
+  var gen=document.getElementById('gadsGen');
+  if(gen) gen.addEventListener('click', function(){
+    if(document.getElementById('gadsKey').textContent.indexOf('—')===-1 && !confirm('יצירת מפתח חדש תבטל את המפתח הקיים ב־Google Ads. להמשיך?')) return;
+    gen.disabled=true; gen.textContent='יוצר…';
+    post({action:'gads_genkey'}).then(function(r){
+      if(r&&r.ok){document.getElementById('gadsKey').textContent=r.key;gen.textContent='יצירת מפתח חדש';}
+      else gen.textContent='שגיאה — נסו שוב';
+      gen.disabled=false;
+    });
+  });
+
   var q = document.getElementById('q'), fs = document.getElementById('fstatus'), tbl = document.getElementById('tbl');
   function applyFilter(){
     if(!tbl) return;
