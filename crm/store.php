@@ -6,6 +6,13 @@
    إن تعذّر ذلك (open_basedir)، يعود لمجلد محمي داخل الموقع كحل بديل.
    ===================================================================== */
 
+/* المنطقة الزمنية الموحّدة لكل الـCRM (تخزين + عرض): توقيت القدس.
+   هذا الملف يُستدعى من index.php و send.php و gads-webhook.php، فالضبط هنا يكفي. */
+if (!defined('CRM_TZ')) {
+    define('CRM_TZ', 'Asia/Jerusalem');
+    @date_default_timezone_set(CRM_TZ);
+}
+
 function crm_data_dir() {
     static $dir = null;
     if ($dir !== null) return $dir;

@@ -14,6 +14,11 @@ $SUBJECT    = 'פנייה חדשה מהאתר';                      // موضو
 
 header('Content-Type: application/json; charset=utf-8');
 
+// توقيت القدس + مخزن الـCRM (يُستدعى مبكراً حتى يكون ts بتوقيت القدس)
+$storeHelper = __DIR__ . '/crm/store.php';
+if (is_file($storeHelper)) require_once $storeHelper;
+else @date_default_timezone_set('Asia/Jerusalem');
+
 // اقبل POST فقط
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -78,9 +83,7 @@ $lead = [
     'source'   => clean($_POST['source'] ?? '') ?: 'אתר ראשי',
     'ip'       => $_SERVER['REMOTE_ADDR'] ?? '',
 ];
-$storeHelper = __DIR__ . '/crm/store.php';
-if (is_file($storeHelper)) {
-    require_once $storeHelper;
+if (function_exists('crm_data_dir')) {
     $crmDir = crm_data_dir();
     @file_put_contents(
         $crmDir . '/leads.ndjson',

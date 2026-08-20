@@ -13,7 +13,16 @@ $CFG    = is_file(__DIR__ . '/config.php') ? (include __DIR__ . '/config.php') :
 
 $DATA   = crm_data_dir();             // مجلد ثابت خارج مجلد النشر
 $LEADS  = $DATA . '/leads.ndjson';    // سطر JSON لكل ليد
-$STATUS = $DATA . '/status.json';     // { id: "new"|"contacted"|"done" }
+$STATUS = $DATA . '/status.json';     // { id: "new"|"contacted"|"done"|"not_interested" }
+$NOTES  = $DATA . '/notes.json';      // { id: [ {"t":"2026-08-20 14:05","txt":"..."} , ... ] }
+
+/* حالات الليد — مكان واحد لإضافة/تعديل أي حالة (المفتاح => التسمية العبرية) */
+$ST_LBL = [
+    'new'            => 'חדש',
+    'contacted'      => 'נוצר קשר',
+    'done'           => 'טופל',
+    'not_interested' => 'לא מעוניין',
+];
 
 /* ---------- أدوات ---------- */
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -32,6 +41,11 @@ function load_status($f){
     return [];
 }
 function save_status($f, $a){ @file_put_contents($f, json_encode($a, JSON_UNESCAPED_UNICODE), LOCK_EX); }
+function load_notes($f){
+    if (is_file($f)) { $j = json_decode(file_get_contents($f), true); if (is_array($j)) return $j; }
+    return [];
+}
+function save_notes($f, $a){ @file_put_contents($f, json_encode($a, JSON_UNESCAPED_UNICODE), LOCK_EX); }
 function csrf(){ if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(16)); return $_SESSION['csrf']; }
 function csrf_ok(){ return isset($_POST['csrf'], $_SESSION['csrf']) && hash_equals($_SESSION['csrf'], $_POST['csrf']); }
 
@@ -80,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $id = (string)($_POST['id'] ?? '');
 
     if ($_POST['action'] === 'status') {
-        $val = in_array($_POST['value'] ?? '', ['new','contacted','done'], true) ? $_POST['value'] : 'new';
+        $val = in_array($_POST['value'] ?? '', array_keys($ST_LBL), true) ? $_POST['value'] : 'new';
         $st = load_status($STATUS); $st[$id] = $val; save_status($STATUS, $st);
         echo json_encode(['ok'=>true]); exit;
     }
@@ -90,7 +104,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $lines = array_map(fn($l) => json_encode($l, JSON_UNESCAPED_UNICODE), $kept);
         @file_put_contents($LEADS, $lines ? implode("\n", $lines) . "\n" : '', LOCK_EX);
         $st = load_status($STATUS); unset($st[$id]); save_status($STATUS, $st);
+        $nt = load_notes($NOTES);   unset($nt[$id]); save_notes($NOTES, $nt);
         echo json_encode(['ok'=>true]); exit;
+    }
+    if ($_POST['action'] === 'note_add') {
+        $txt = trim((string)($_POST['text'] ?? ''));
+        $txt = str_replace(array("\r\n", "\r"), "\n", $txt);
+        $txt = preg_replace('/[^\P{C}\n\t]+/u', '', $txt);
+        if ($id === '' || $txt === '') { echo json_encode(['ok'=>false]); exit; }
+        if (function_exists('mb_substr') && mb_strlen($txt, 'UTF-8') > 2000) $txt = mb_substr($txt, 0, 2000, 'UTF-8');
+        $nt = load_notes($NOTES);
+        if (!isset($nt[$id]) || !is_array($nt[$id])) $nt[$id] = [];
+        $note = ['t' => date('Y-m-d H:i'), 'txt' => $txt];
+        $nt[$id][] = $note;
+        save_notes($NOTES, $nt);
+        echo json_encode(['ok'=>true, 'note'=>$note, 'count'=>count($nt[$id])]); exit;
     }
     if ($_POST['action'] === 'gads_genkey') {
         $key = bin2hex(random_bytes(20));
@@ -102,6 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 $leads  = load_leads($LEADS);
 $status = load_status($STATUS);
+$notes  = load_notes($NOTES);
 usort($leads, fn($a,$b) => strcmp($b['id'] ?? '', $a['id'] ?? '')); // الأحدث أولاً
 $gads_key = is_file($DATA . '/gads_key.txt') ? trim(file_get_contents($DATA . '/gads_key.txt')) : '';
 $gads_url = ((($_SERVER['HTTPS'] ?? '') === 'on') ? 'https' : 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'younisclinic.com') . '/crm/gads-webhook.php';
@@ -112,11 +141,13 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Disposition: attachment; filename="younis-leads.csv"');
     echo "\xEF\xBB\xBF"; // BOM لإكسل
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['תאריך','שם','טלפון','דוא״ל','טיפול','הודעה','מקור','סטטוס']);
-    $lbl = ['new'=>'חדש','contacted'=>'נוצר קשר','done'=>'טופל'];
+    fputcsv($out, ['תאריך','שם','טלפון','דוא״ל','טיפול','הודעה','מקור','סטטוס','הערות']);
     foreach ($leads as $l) {
-        $s = $status[$l['id'] ?? ''] ?? 'new';
-        fputcsv($out, [$l['ts']??'', $l['name']??'', $l['phone']??'', $l['email']??'', $l['interest']??'', $l['msg']??'', $l['source']??'', $lbl[$s]??$s]);
+        $lid = $l['id'] ?? '';
+        $s   = $status[$lid] ?? 'new';
+        $nl  = [];
+        foreach (($notes[$lid] ?? []) as $n) $nl[] = '[' . ($n['t'] ?? '') . '] ' . ($n['txt'] ?? '');
+        fputcsv($out, [$l['ts']??'', $l['name']??'', $l['phone']??'', $l['email']??'', $l['interest']??'', $l['msg']??'', $l['source']??'', $ST_LBL[$s]??$s, implode(chr(10), $nl)]);
     }
     fclose($out); exit;
 }
@@ -185,11 +216,29 @@ foreach ($leads as $l) {
   .gads .cp button,.gads .gen{background:var(--teal);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:.85rem}
   .gads .gen{margin-top:14px}
   .gads-help{color:var(--muted);font-size:.82rem;line-height:1.6;margin-top:12px}
+  .st-not_interested{background:#f0f1f2;color:#5c6564}
+  .tzhint{font-size:.78rem;color:rgba(255,255,255,.85);white-space:nowrap}
+  .nbtn{background:var(--pale);border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:.82rem;color:var(--teal);white-space:nowrap;font-weight:700}
+  .nbtn:hover{background:#e1f1f0}
+  tr.has-notes .nbtn{background:#e4f6ec;border-color:#c7e8d5;color:#1c7a45}
+  tr.nrow>td{background:#fbfdfd;border-bottom:2px solid var(--line)}
+  .notes{display:flex;flex-direction:column;gap:10px;max-width:820px}
+  .nlist{display:flex;flex-direction:column;gap:6px}
+  .note{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:.88rem;white-space:pre-wrap;word-break:break-word;line-height:1.55}
+  .note .nt{display:block;font-size:.74rem;color:var(--muted);margin-bottom:2px}
+  .nempty{color:var(--muted);font-size:.85rem}
+  .nform{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+  .nform textarea{flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:.9rem;resize:vertical;background:#fff}
+  .nform button{background:var(--teal);color:#fff;border:0;border-radius:10px;padding:10px 15px;font-weight:700;cursor:pointer;font-family:inherit;font-size:.88rem}
+  .nform button:hover{background:#095657}
+  .nform button:disabled{opacity:.6;cursor:default}
+  .nform .nmsg{font-size:.82rem;color:var(--muted);align-self:center}
 </style>
 </head>
 <body>
 <div class="top">
   <h1>CRM · מרפאת ד״ר תחסין יונס</h1>
+  <span class="tzhint">🕒 שעון ישראל · <?= h(date('d/m/Y H:i')) ?></span>
   <div class="spacer"></div>
   <a class="logout" href="?logout=1">יציאה ←</a>
 </div>
@@ -216,9 +265,7 @@ foreach ($leads as $l) {
     <input type="search" id="q" placeholder="חיפוש לפי שם / טלפון / דוא״ל / הודעה…">
     <select id="fstatus">
       <option value="">כל הסטטוסים</option>
-      <option value="new">חדש</option>
-      <option value="contacted">נוצר קשר</option>
-      <option value="done">טופל</option>
+      <?php foreach ($ST_LBL as $k=>$v): ?><option value="<?= h($k) ?>"><?= h($v) ?></option><?php endforeach; ?>
     </select>
     <a class="btn" href="?export=csv">⬇ ייצוא CSV</a>
   </div>
@@ -229,12 +276,13 @@ foreach ($leads as $l) {
     <?php else: ?>
     <table id="tbl">
       <thead>
-        <tr><th>תאריך</th><th>שם</th><th>טלפון</th><th>דוא״ל</th><th>טיפול</th><th>הודעה</th><th>מקור</th><th>סטטוס</th><th></th></tr>
+        <tr><th>תאריך</th><th>שם</th><th>טלפון</th><th>דוא״ל</th><th>טיפול</th><th>הודעה</th><th>מקור</th><th>הערות</th><th>סטטוס</th><th></th></tr>
       </thead>
       <tbody>
-        <?php $lbl=['new'=>'חדש','contacted'=>'נוצר קשר','done'=>'טופל']; foreach ($leads as $l):
-          $id=$l['id']??''; $s=$status[$id]??'new'; ?>
-        <tr data-id="<?= h($id) ?>" data-status="<?= h($s) ?>">
+        <?php foreach ($leads as $l):
+          $id=$l['id']??''; $s=$status[$id]??'new'; $ns=$notes[$id]??[];
+          $ntxt=''; foreach ($ns as $n) $ntxt .= ' ' . ($n['txt'] ?? ''); ?>
+        <tr class="lead<?= $ns ? ' has-notes' : '' ?>" data-id="<?= h($id) ?>" data-status="<?= h($s) ?>" data-notes="<?= h(trim($ntxt)) ?>">
           <td style="white-space:nowrap"><?= h($l['ts']??'') ?></td>
           <td><?= h($l['name']??'') ?></td>
           <td style="white-space:nowrap"><?php if(!empty($l['phone'])): ?><a class="lnk" dir="ltr" href="tel:<?= h(preg_replace('/[^0-9+]/','',$l['phone'])) ?>"><?= h($l['phone']) ?></a><?php endif; ?></td>
@@ -242,12 +290,30 @@ foreach ($leads as $l) {
           <td><?= h($l['interest']??'') ?></td>
           <td class="msg"><?= h($l['msg']??'') ?></td>
           <td class="src"><?= h($l['source']??'') ?></td>
+          <td><button type="button" class="nbtn" title="הצגת/הוספת הערות">📝 הערות <span class="ncount"><?= $ns ? '('.count($ns).')' : '' ?></span></button></td>
           <td>
             <select class="st st-<?= h($s) ?>" data-id="<?= h($id) ?>">
-              <?php foreach($lbl as $k=>$v): ?><option value="<?= $k ?>"<?= $s===$k?' selected':'' ?>><?= $v ?></option><?php endforeach; ?>
+              <?php foreach($ST_LBL as $k=>$v): ?><option value="<?= h($k) ?>"<?= $s===$k?' selected':'' ?>><?= h($v) ?></option><?php endforeach; ?>
             </select>
           </td>
           <td><button class="del" data-id="<?= h($id) ?>" title="מחיקה">🗑</button></td>
+        </tr>
+        <tr class="nrow" hidden>
+          <td colspan="10">
+            <div class="notes">
+              <div class="nlist">
+                <?php foreach ($ns as $n): ?>
+                <div class="note"><span class="nt"><?= h($n['t']??'') ?></span><span class="nx"><?= h($n['txt']??'') ?></span></div>
+                <?php endforeach; ?>
+                <?php if (!$ns): ?><div class="nempty">אין הערות עדיין.</div><?php endif; ?>
+              </div>
+              <form class="nform" data-id="<?= h($id) ?>">
+                <textarea rows="2" placeholder="הוסיפו הערה — למשל: נוצר קשר עם הפונה, ביקש שנחזור אליו מחר בבוקר…"></textarea>
+                <button type="submit">שמירת הערה</button>
+                <span class="nmsg"></span>
+              </form>
+            </div>
+          </td>
         </tr>
         <?php endforeach; ?>
       </tbody>
@@ -285,10 +351,14 @@ foreach ($leads as $l) {
   function applyFilter(){
     if(!tbl) return;
     var term=(q.value||'').toLowerCase(), st=fs.value;
-    tbl.querySelectorAll('tbody tr').forEach(function(tr){
-      var okText = tr.innerText.toLowerCase().indexOf(term)>-1;
+    tbl.querySelectorAll('tbody tr.lead').forEach(function(tr){
+      var hay = (tr.innerText + ' ' + (tr.getAttribute('data-notes')||'')).toLowerCase();
+      var okText = !term || hay.indexOf(term)>-1;
       var okStat = !st || tr.getAttribute('data-status')===st;
-      tr.style.display = (okText && okStat) ? '' : 'none';
+      var show = okText && okStat;
+      tr.style.display = show ? '' : 'none';
+      var nr = tr.nextElementSibling;
+      if (nr && nr.classList.contains('nrow')) nr.style.display = show ? '' : 'none';
     });
   }
   if(q) q.addEventListener('input', applyFilter);
@@ -301,11 +371,58 @@ foreach ($leads as $l) {
       post({action:'status', id:id, value:val}).then(applyFilter);
     });
   });
+  // הערות: פתיחה/סגירה
+  document.querySelectorAll('.nbtn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var nr = b.closest('tr').nextElementSibling;
+      if(!nr || !nr.classList.contains('nrow')) return;
+      nr.hidden = !nr.hidden;
+      if(!nr.hidden){ var ta = nr.querySelector('textarea'); if(ta) ta.focus(); }
+    });
+  });
+  // הערות: שמירה
+  document.querySelectorAll('.nform').forEach(function(f){
+    f.addEventListener('submit', function(e){
+      e.preventDefault();
+      var id  = f.getAttribute('data-id'),
+          ta  = f.querySelector('textarea'),
+          btn = f.querySelector('button'),
+          msg = f.querySelector('.nmsg'),
+          txt = (ta.value||'').trim();
+      if(!txt) { ta.focus(); return; }
+      btn.disabled = true; msg.textContent = 'שומר…';
+      post({action:'note_add', id:id, text:txt}).then(function(r){
+        btn.disabled = false;
+        if(!(r && r.ok)) { msg.textContent = 'שגיאה — נסו שוב'; return; }
+        var list = f.parentNode.querySelector('.nlist'),
+            em   = list.querySelector('.nempty');
+        if(em) em.remove();
+        var d  = document.createElement('div'); d.className = 'note';
+        var s1 = document.createElement('span'); s1.className = 'nt'; s1.textContent = r.note.t;
+        var s2 = document.createElement('span'); s2.className = 'nx'; s2.textContent = r.note.txt;
+        d.appendChild(s1); d.appendChild(s2); list.appendChild(d);
+        ta.value = ''; msg.textContent = 'נשמר ✓';
+        setTimeout(function(){ msg.textContent = ''; }, 1600);
+        var tr = f.closest('tr').previousElementSibling;
+        if(tr){
+          var c = tr.querySelector('.ncount'); if(c) c.textContent = '('+r.count+')';
+          tr.classList.add('has-notes');
+          tr.setAttribute('data-notes', ((tr.getAttribute('data-notes')||'') + ' ' + r.note.txt).trim());
+        }
+      });
+    });
+  });
+
   document.querySelectorAll('.del').forEach(function(b){
     b.addEventListener('click', function(){
       if(!confirm('למחוק פנייה זו לצמיתות?')) return;
       var id=b.getAttribute('data-id'), tr=b.closest('tr');
-      post({action:'delete', id:id}).then(function(r){ if(r.ok) tr.remove(); });
+      post({action:'delete', id:id}).then(function(r){
+        if(!r.ok) return;
+        var nr = tr.nextElementSibling;
+        if (nr && nr.classList.contains('nrow')) nr.remove();
+        tr.remove();
+      });
     });
   });
 </script>
