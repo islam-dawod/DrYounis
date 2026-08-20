@@ -46,6 +46,28 @@ function load_notes($f){
     return [];
 }
 function save_notes($f, $a){ @file_put_contents($f, json_encode($a, JSON_UNESCAPED_UNICODE), LOCK_EX); }
+/* تنقية نص الملاحظة: يحفظ الأسطر الجديدة والـtab ويحذف بقية أحرف التحكّم */
+function note_clean($v){
+    $v = trim((string)$v);
+    $v = str_replace(array("\r\n", "\r"), "\n", $v);
+    $v = preg_replace('/[^\P{C}\n\t]+/u', '', $v);
+    if (function_exists('mb_strlen') && mb_strlen($v, 'UTF-8') > 2000) $v = mb_substr($v, 0, 2000, 'UTF-8');
+    return $v;
+}
+/* يمنح كل ملاحظة معرّفاً ثابتاً (ترقية لمرة واحدة للملاحظات القديمة) */
+function notes_ensure_ids(&$all){
+    $changed = false;
+    if (!is_array($all)) { $all = []; return true; }
+    foreach ($all as $lid => $list) {
+        if (!is_array($list)) { unset($all[$lid]); $changed = true; continue; }
+        foreach ($list as $i => $n) {
+            if (!is_array($n)) { unset($all[$lid][$i]); $changed = true; continue; }
+            if (empty($n['id'])) { $all[$lid][$i]['id'] = bin2hex(random_bytes(4)); $changed = true; }
+        }
+        $all[$lid] = array_values($all[$lid]);
+    }
+    return $changed;
+}
 function csrf(){ if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(16)); return $_SESSION['csrf']; }
 function csrf_ok(){ return isset($_POST['csrf'], $_SESSION['csrf']) && hash_equals($_SESSION['csrf'], $_POST['csrf']); }
 
@@ -108,17 +130,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         echo json_encode(['ok'=>true]); exit;
     }
     if ($_POST['action'] === 'note_add') {
-        $txt = trim((string)($_POST['text'] ?? ''));
-        $txt = str_replace(array("\r\n", "\r"), "\n", $txt);
-        $txt = preg_replace('/[^\P{C}\n\t]+/u', '', $txt);
+        $txt = note_clean($_POST['text'] ?? '');
         if ($id === '' || $txt === '') { echo json_encode(['ok'=>false]); exit; }
-        if (function_exists('mb_substr') && mb_strlen($txt, 'UTF-8') > 2000) $txt = mb_substr($txt, 0, 2000, 'UTF-8');
-        $nt = load_notes($NOTES);
+        $nt = load_notes($NOTES); notes_ensure_ids($nt);
         if (!isset($nt[$id]) || !is_array($nt[$id])) $nt[$id] = [];
-        $note = ['t' => date('Y-m-d H:i'), 'txt' => $txt];
+        $note = ['id' => bin2hex(random_bytes(4)), 't' => date('Y-m-d H:i'), 'txt' => $txt];
         $nt[$id][] = $note;
         save_notes($NOTES, $nt);
         echo json_encode(['ok'=>true, 'note'=>$note, 'count'=>count($nt[$id])]); exit;
+    }
+    if ($_POST['action'] === 'note_edit') {
+        $nid = (string)($_POST['nid'] ?? '');
+        $txt = note_clean($_POST['text'] ?? '');
+        if ($id === '' || $nid === '' || $txt === '') { echo json_encode(['ok'=>false]); exit; }
+        $nt = load_notes($NOTES); notes_ensure_ids($nt);
+        $found = null;
+        foreach (($nt[$id] ?? []) as $i => $n) {
+            if ((string)($n['id'] ?? '') === $nid) {
+                $nt[$id][$i]['txt'] = $txt;
+                $nt[$id][$i]['e']   = date('Y-m-d H:i');
+                $found = $nt[$id][$i];
+                break;
+            }
+        }
+        if ($found === null) { echo json_encode(['ok'=>false, 'error'=>'not_found']); exit; }
+        save_notes($NOTES, $nt);
+        echo json_encode(['ok'=>true, 'note'=>$found]); exit;
+    }
+    if ($_POST['action'] === 'note_del') {
+        $nid = (string)($_POST['nid'] ?? '');
+        if ($id === '' || $nid === '') { echo json_encode(['ok'=>false]); exit; }
+        $nt = load_notes($NOTES); notes_ensure_ids($nt);
+        if (isset($nt[$id]) && is_array($nt[$id])) {
+            $nt[$id] = array_values(array_filter($nt[$id], fn($n) => (string)($n['id'] ?? '') !== $nid));
+            if (!$nt[$id]) unset($nt[$id]);
+            save_notes($NOTES, $nt);
+        }
+        echo json_encode(['ok'=>true, 'count'=>count($nt[$id] ?? [])]); exit;
     }
     if ($_POST['action'] === 'gads_genkey') {
         $key = bin2hex(random_bytes(20));
@@ -131,6 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $leads  = load_leads($LEADS);
 $status = load_status($STATUS);
 $notes  = load_notes($NOTES);
+if (notes_ensure_ids($notes)) save_notes($NOTES, $notes); // ترقية لمرة واحدة: معرّف لكل ملاحظة قديمة
 usort($leads, fn($a,$b) => strcmp($b['id'] ?? '', $a['id'] ?? '')); // الأحدث أولاً
 $gads_key = is_file($DATA . '/gads_key.txt') ? trim(file_get_contents($DATA . '/gads_key.txt')) : '';
 $gads_url = ((($_SERVER['HTTPS'] ?? '') === 'on') ? 'https' : 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'younisclinic.com') . '/crm/gads-webhook.php';
@@ -146,7 +195,10 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         $lid = $l['id'] ?? '';
         $s   = $status[$lid] ?? 'new';
         $nl  = [];
-        foreach (($notes[$lid] ?? []) as $n) $nl[] = '[' . ($n['t'] ?? '') . '] ' . ($n['txt'] ?? '');
+        foreach (($notes[$lid] ?? []) as $n) {
+            $nl[] = '[' . ($n['t'] ?? '') . '] ' . ($n['txt'] ?? '')
+                  . (!empty($n['e']) ? ' (נערך ' . $n['e'] . ')' : '');
+        }
         fputcsv($out, [$l['ts']??'', $l['name']??'', $l['phone']??'', $l['email']??'', $l['interest']??'', $l['msg']??'', $l['source']??'', $ST_LBL[$s]??$s, implode(chr(10), $nl)]);
     }
     fclose($out); exit;
@@ -224,8 +276,22 @@ foreach ($leads as $l) {
   tr.nrow>td{background:#fbfdfd;border-bottom:2px solid var(--line)}
   .notes{display:flex;flex-direction:column;gap:10px;max-width:820px}
   .nlist{display:flex;flex-direction:column;gap:6px}
-  .note{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:.88rem;white-space:pre-wrap;word-break:break-word;line-height:1.55}
-  .note .nt{display:block;font-size:.74rem;color:var(--muted);margin-bottom:2px}
+  .note{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 11px;font-size:.88rem;word-break:break-word;line-height:1.55}
+  .note .nhead{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+  .note .nt{font-size:.74rem;color:var(--muted)}
+  .note .ned{font-size:.72rem;color:#a86400}
+  .note .nsp{flex:1}
+  .note .nx{white-space:pre-wrap;word-break:break-word}
+  .nact{background:none;border:0;cursor:pointer;font-size:.95rem;line-height:1;padding:3px 6px;border-radius:7px;color:var(--muted);opacity:.5}
+  .note:hover .nact{opacity:1}
+  .nact:hover{background:var(--pale);color:var(--teal)}
+  .nact[data-act=del]:hover{background:#fdecea;color:#c0392b}
+  .nedit{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;margin-top:6px}
+  .nedit textarea{flex:1;min-width:200px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:.9rem;resize:vertical}
+  .nedit .nsave{background:var(--teal);color:#fff;border:0;border-radius:9px;padding:8px 13px;font-weight:700;cursor:pointer;font-family:inherit;font-size:.85rem}
+  .nedit .nsave:disabled{opacity:.6;cursor:default}
+  .nedit .ncancel{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px 13px;cursor:pointer;font-family:inherit;font-size:.85rem;color:var(--muted)}
+  .nedit .nmsg{font-size:.8rem;color:var(--muted);align-self:center}
   .nempty{color:var(--muted);font-size:.85rem}
   .nform{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
   .nform textarea{flex:1;min-width:220px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:.9rem;resize:vertical;background:#fff}
@@ -303,7 +369,16 @@ foreach ($leads as $l) {
             <div class="notes">
               <div class="nlist">
                 <?php foreach ($ns as $n): ?>
-                <div class="note"><span class="nt"><?= h($n['t']??'') ?></span><span class="nx"><?= h($n['txt']??'') ?></span></div>
+                <div class="note" data-nid="<?= h($n['id']??'') ?>">
+                  <div class="nhead">
+                    <span class="nt"><?= h($n['t']??'') ?></span>
+                    <?php if (!empty($n['e'])): ?><span class="ned">(נערך <?= h($n['e']) ?>)</span><?php endif; ?>
+                    <span class="nsp"></span>
+                    <button type="button" class="nact" data-act="edit" title="עריכת הערה">✎</button>
+                    <button type="button" class="nact" data-act="del" title="מחיקת הערה">🗑</button>
+                  </div>
+                  <div class="nx"><?= h($n['txt']??'') ?></div>
+                </div>
                 <?php endforeach; ?>
                 <?php if (!$ns): ?><div class="nempty">אין הערות עדיין.</div><?php endif; ?>
               </div>
@@ -380,7 +455,39 @@ foreach ($leads as $l) {
       if(!nr.hidden){ var ta = nr.querySelector('textarea'); if(ta) ta.focus(); }
     });
   });
-  // הערות: שמירה
+  // הערות: סנכרון מונה + טקסט לחיפוש בשורת הליד, לפי מה שמוצג כרגע
+  function refreshLeadNotes(list){
+    if(!list) return;
+    var nrow = list.closest('tr.nrow'); if(!nrow) return;
+    var tr = nrow.previousElementSibling; if(!tr) return;
+    var txts = [];
+    list.querySelectorAll('.note .nx').forEach(function(x){ txts.push(x.textContent); });
+    var c = tr.querySelector('.ncount'); if(c) c.textContent = txts.length ? '('+txts.length+')' : '';
+    tr.setAttribute('data-notes', txts.join(' '));
+    if(txts.length) tr.classList.add('has-notes'); else tr.classList.remove('has-notes');
+    if(!txts.length && !list.querySelector('.nempty')){
+      var em = document.createElement('div'); em.className = 'nempty';
+      em.textContent = 'אין הערות עדיין.'; list.appendChild(em);
+    }
+  }
+  // הערות: בניית פריט הערה (זהה למה שמייצר ה־PHP)
+  function buildNote(n){
+    var d  = document.createElement('div'); d.className = 'note'; d.setAttribute('data-nid', n.id||'');
+    var hd = document.createElement('div'); hd.className = 'nhead';
+    var t  = document.createElement('span'); t.className = 'nt'; t.textContent = n.t||'';
+    hd.appendChild(t);
+    if(n.e){ var ed = document.createElement('span'); ed.className='ned'; ed.textContent = '(נערך '+n.e+')'; hd.appendChild(ed); }
+    var sp = document.createElement('span'); sp.className = 'nsp'; hd.appendChild(sp);
+    [['edit','עריכת הערה','✎'],['del','מחיקת הערה','🗑']].forEach(function(a){
+      var b = document.createElement('button'); b.type='button'; b.className='nact';
+      b.setAttribute('data-act', a[0]); b.title = a[1]; b.textContent = a[2];
+      hd.appendChild(b);
+    });
+    var x = document.createElement('div'); x.className = 'nx'; x.textContent = n.txt||'';
+    d.appendChild(hd); d.appendChild(x);
+    return d;
+  }
+  // הערות: הוספה
   document.querySelectorAll('.nform').forEach(function(f){
     f.addEventListener('submit', function(e){
       e.preventDefault();
@@ -397,18 +504,65 @@ foreach ($leads as $l) {
         var list = f.parentNode.querySelector('.nlist'),
             em   = list.querySelector('.nempty');
         if(em) em.remove();
-        var d  = document.createElement('div'); d.className = 'note';
-        var s1 = document.createElement('span'); s1.className = 'nt'; s1.textContent = r.note.t;
-        var s2 = document.createElement('span'); s2.className = 'nx'; s2.textContent = r.note.txt;
-        d.appendChild(s1); d.appendChild(s2); list.appendChild(d);
+        list.appendChild(buildNote(r.note));
         ta.value = ''; msg.textContent = 'נשמר ✓';
         setTimeout(function(){ msg.textContent = ''; }, 1600);
-        var tr = f.closest('tr').previousElementSibling;
-        if(tr){
-          var c = tr.querySelector('.ncount'); if(c) c.textContent = '('+r.count+')';
-          tr.classList.add('has-notes');
-          tr.setAttribute('data-notes', ((tr.getAttribute('data-notes')||'') + ' ' + r.note.txt).trim());
+        refreshLeadNotes(list);
+      });
+    });
+  });
+  // הערות: עריכה / מחיקה (delegation — תקף גם להערות שנוספו עכשיו)
+  document.addEventListener('click', function(e){
+    var b = (e.target && e.target.closest) ? e.target.closest('.nact') : null;
+    if(!b) return;
+    var note = b.closest('.note'); if(!note) return;
+    var list = note.parentNode,
+        nrow = note.closest('tr.nrow'),
+        form = nrow ? nrow.querySelector('.nform') : null,
+        lid  = form ? form.getAttribute('data-id') : '',
+        nid  = note.getAttribute('data-nid');
+    if(!lid || !nid) return;
+
+    if(b.getAttribute('data-act') === 'del'){
+      if(!confirm('למחוק הערה זו?')) return;
+      post({action:'note_del', id:lid, nid:nid}).then(function(r){
+        if(!(r && r.ok)) { alert('שגיאה במחיקת ההערה — נסו שוב.'); return; }
+        note.remove(); refreshLeadNotes(list);
+      });
+      return;
+    }
+    if(note.querySelector('.nedit')) return;               // כבר במצב עריכה
+    var body = note.querySelector('.nx'),
+        box  = document.createElement('div'),
+        ta   = document.createElement('textarea'),
+        ok   = document.createElement('button'),
+        no   = document.createElement('button'),
+        msg  = document.createElement('span');
+    box.className = 'nedit';
+    ta.rows = 3; ta.value = body.textContent;
+    ok.type = 'button'; ok.className = 'nsave';   ok.textContent = 'שמירה';
+    no.type = 'button'; no.className = 'ncancel'; no.textContent = 'ביטול';
+    msg.className = 'nmsg';
+    box.appendChild(ta); box.appendChild(ok); box.appendChild(no); box.appendChild(msg);
+    body.style.display = 'none'; note.appendChild(box); ta.focus();
+
+    no.addEventListener('click', function(){ box.remove(); body.style.display = ''; });
+    ok.addEventListener('click', function(){
+      var txt = (ta.value||'').trim();
+      if(!txt) { ta.focus(); return; }
+      ok.disabled = true; msg.textContent = 'שומר…';
+      post({action:'note_edit', id:lid, nid:nid, text:txt}).then(function(r){
+        ok.disabled = false;
+        if(!(r && r.ok)) { msg.textContent = 'שגיאה — נסו שוב'; return; }
+        body.textContent = r.note.txt;
+        var hd = note.querySelector('.nhead'), ed = note.querySelector('.ned');
+        if(!ed){
+          ed = document.createElement('span'); ed.className = 'ned';
+          hd.insertBefore(ed, note.querySelector('.nsp'));
         }
+        ed.textContent = '(נערך '+(r.note.e||'')+')';
+        box.remove(); body.style.display = '';
+        refreshLeadNotes(list);
       });
     });
   });
