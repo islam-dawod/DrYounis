@@ -13,6 +13,26 @@ if (!defined('CRM_TZ')) {
     @date_default_timezone_set(CRM_TZ);
 }
 
+/* ---------------------------------------------------------------
+   إعدادات ربط Facebook / Instagram (Lead Ads) — تُحفظ خارج مجلد النشر:
+   { verify_token, key, app_secret, page_token }
+   --------------------------------------------------------------- */
+function crm_fb_cfg_file() { return crm_data_dir() . '/fb_config.json'; }
+
+function crm_fb_cfg() {
+    $f = crm_fb_cfg_file();
+    if (is_file($f)) {
+        $j = json_decode((string)file_get_contents($f), true);
+        if (is_array($j)) return $j;
+    }
+    return [];
+}
+
+function crm_fb_cfg_save($c) {
+    @file_put_contents(crm_fb_cfg_file(), json_encode($c, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
+    @chmod(crm_fb_cfg_file(), 0600);
+}
+
 function crm_data_dir() {
     static $dir = null;
     if ($dir !== null) return $dir;

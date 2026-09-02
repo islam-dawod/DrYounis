@@ -168,6 +168,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         echo json_encode(['ok'=>true, 'count'=>count($nt[$id] ?? [])]); exit;
     }
+    if ($_POST['action'] === 'fb_genkey') {
+        $c = crm_fb_cfg();
+        $c['verify_token'] = bin2hex(random_bytes(12));
+        $c['key']          = bin2hex(random_bytes(20));
+        crm_fb_cfg_save($c);
+        echo json_encode(['ok'=>true, 'verify'=>$c['verify_token'], 'key'=>$c['key']]); exit;
+    }
+    if ($_POST['action'] === 'fb_save') {
+        $c   = crm_fb_cfg();
+        $sec = trim((string)($_POST['app_secret'] ?? ''));
+        $tok = trim((string)($_POST['page_token'] ?? ''));
+        if ($sec !== '') $c['app_secret'] = $sec;   // فارغ = أبقِ القديم
+        if ($tok !== '') $c['page_token'] = $tok;
+        crm_fb_cfg_save($c);
+        echo json_encode([
+            'ok'     => true,
+            'secret' => !empty($c['app_secret']),
+            'token'  => !empty($c['page_token']),
+        ]); exit;
+    }
     if ($_POST['action'] === 'gads_genkey') {
         $key = bin2hex(random_bytes(20));
         @file_put_contents($DATA . '/gads_key.txt', $key, LOCK_EX);
@@ -183,6 +203,8 @@ if (notes_ensure_ids($notes)) save_notes($NOTES, $notes); // ترقية لمرة
 usort($leads, fn($a,$b) => strcmp($b['id'] ?? '', $a['id'] ?? '')); // الأحدث أولاً
 $gads_key = is_file($DATA . '/gads_key.txt') ? trim(file_get_contents($DATA . '/gads_key.txt')) : '';
 $gads_url = ((($_SERVER['HTTPS'] ?? '') === 'on') ? 'https' : 'https') . '://' . ($_SERVER['HTTP_HOST'] ?? 'younisclinic.com') . '/crm/gads-webhook.php';
+$fb_cfg   = crm_fb_cfg();
+$fb_url   = 'https://' . ($_SERVER['HTTP_HOST'] ?? 'younisclinic.com') . '/crm/fb-webhook.php';
 
 /* ---------- تصدير CSV ---------- */
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
@@ -268,6 +290,11 @@ foreach ($leads as $l) {
   .gads .cp button,.gads .gen{background:var(--teal);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:.85rem}
   .gads .gen{margin-top:14px}
   .gads-help{color:var(--muted);font-size:.82rem;line-height:1.6;margin-top:12px}
+  .gads-help code{display:inline;background:#f4f8f8;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.8rem;direction:ltr}
+  .fbsec{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .fbsec input{width:100%;max-width:520px;display:block;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:.88rem;direction:ltr;text-align:left;background:#fff}
+  .okmark{background:#e4f6ec;color:#1c7a45;border-radius:999px;padding:1px 8px;font-size:.72rem;font-weight:700}
+  .savemsg{font-size:.82rem;color:var(--muted);margin-inline-start:10px}
   .st-not_interested{background:#f0f1f2;color:#5c6564}
   .tzhint{font-size:.78rem;color:rgba(255,255,255,.85);white-space:nowrap}
   .nbtn{background:var(--pale);border:1px solid var(--line);border-radius:9px;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:.82rem;color:var(--teal);white-space:nowrap;font-weight:700}
@@ -324,6 +351,33 @@ foreach ($leads as $l) {
       <div class="cp"><code id="gadsKey"><?= $gads_key !== '' ? h($gads_key) : '— טרם נוצר —' ?></code><button type="button" data-copy="gadsKey">העתק</button></div>
       <button type="button" id="gadsGen" class="gen"><?= $gads_key !== '' ? 'יצירת מפתח חדש' : 'יצירת מפתח' ?></button>
       <p class="gads-help">ב־Google Ads: נכס טופס לידים → אפשרויות מסירה (Delivery) → Webhook. הדביקו את ה־URL ואת ה־Key למעלה, ואז שלחו „Send test data”. הלידים יופיעו כאן אוטומטית.</p>
+    </div>
+  </details>
+
+  <details class="gads">
+    <summary>חיבור Facebook / Instagram (Lead Ads) — טופס לידים ישר ל־CRM</summary>
+    <div class="gads-body">
+      <label>Callback URL</label>
+      <div class="cp"><code id="fbUrl"><?= h($fb_url) ?></code><button type="button" data-copy="fbUrl">העתק</button></div>
+      <label>Verify Token (ל־Meta Webhooks)</label>
+      <div class="cp"><code id="fbVerify"><?= !empty($fb_cfg['verify_token']) ? h($fb_cfg['verify_token']) : '— טרם נוצר —' ?></code><button type="button" data-copy="fbVerify">העתק</button></div>
+      <label>Key (למי שמחבר דרך Make / Zapier)</label>
+      <div class="cp"><code id="fbKey"><?= !empty($fb_cfg['key']) ? h($fb_cfg['key']) : '— טרם נוצר —' ?></code><button type="button" data-copy="fbKey">העתק</button></div>
+      <button type="button" id="fbGen" class="gen"><?= !empty($fb_cfg['verify_token']) ? 'יצירת Token + Key חדשים' : 'יצירת Verify Token + Key' ?></button>
+
+      <div class="fbsec">
+        <label>App Secret <span id="fbSecOk" class="okmark"<?= empty($fb_cfg['app_secret']) ? ' hidden' : '' ?>>שמור ✓</span></label>
+        <input type="password" id="fbAppSecret" autocomplete="off" placeholder="<?= empty($fb_cfg['app_secret']) ? 'מ־Meta: App → Settings → Basic' : 'השאירו ריק כדי לא לשנות' ?>">
+        <label>Page Access Token <span id="fbTokOk" class="okmark"<?= empty($fb_cfg['page_token']) ? ' hidden' : '' ?>>שמור ✓</span></label>
+        <input type="password" id="fbPageToken" autocomplete="off" placeholder="<?= empty($fb_cfg['page_token']) ? 'טוקן עם ההרשאה leads_retrieval' : 'השאירו ריק כדי לא לשנות' ?>">
+        <button type="button" id="fbSave" class="gen">שמירת הפרטים</button>
+        <span id="fbSaveMsg" class="savemsg"></span>
+      </div>
+
+      <p class="gads-help">
+        <b>אפשרות א׳ — חיבור ישיר ל־Meta:</b> developers.facebook.com → צרו App מסוג Business → Webhooks → Page → הדביקו את ה־Callback URL ואת ה־Verify Token שלמעלה → הירשמו לשדה <code>leadgen</code>. אחר כך הדביקו כאן את ה־App Secret ואת ה־Page Access Token (מומלץ טוקן של System User שלא פג תוקף). בדיקה: Lead Ads Testing Tool.<br>
+        <b>אפשרות ב׳ — דרך Make/Zapier:</b> טריגר „Facebook Lead Ads → New Lead” → פעולה HTTP POST ל־Callback URL עם JSON: <code>{"key":"…","name":"…","phone":"…","email":"…"}</code>.
+      </p>
     </div>
   </details>
 
@@ -419,6 +473,39 @@ foreach ($leads as $l) {
       if(r&&r.ok){document.getElementById('gadsKey').textContent=r.key;gen.textContent='יצירת מפתח חדש';}
       else gen.textContent='שגיאה — נסו שוב';
       gen.disabled=false;
+    });
+  });
+
+  // Facebook Lead Ads: יצירת Verify Token + Key
+  var fbGen = document.getElementById('fbGen');
+  if(fbGen) fbGen.addEventListener('click', function(){
+    if(document.getElementById('fbVerify').textContent.indexOf('—')===-1 &&
+       !confirm('יצירת Token חדש תנתק את החיבור הקיים ב־Meta עד שתעדכנו אותו שם. להמשיך?')) return;
+    fbGen.disabled=true; fbGen.textContent='יוצר…';
+    post({action:'fb_genkey'}).then(function(r){
+      if(r&&r.ok){
+        document.getElementById('fbVerify').textContent=r.verify;
+        document.getElementById('fbKey').textContent=r.key;
+        fbGen.textContent='יצירת Token + Key חדשים';
+      } else fbGen.textContent='שגיאה — נסו שוב';
+      fbGen.disabled=false;
+    });
+  });
+  // Facebook Lead Ads: שמירת App Secret + Page Access Token
+  var fbSave = document.getElementById('fbSave');
+  if(fbSave) fbSave.addEventListener('click', function(){
+    var sec=document.getElementById('fbAppSecret'), tok=document.getElementById('fbPageToken'),
+        msg=document.getElementById('fbSaveMsg');
+    if(!sec.value.trim() && !tok.value.trim()){ msg.textContent='אין מה לשמור'; return; }
+    fbSave.disabled=true; msg.textContent='שומר…';
+    post({action:'fb_save', app_secret:sec.value.trim(), page_token:tok.value.trim()}).then(function(r){
+      fbSave.disabled=false;
+      if(!(r&&r.ok)){ msg.textContent='שגיאה — נסו שוב'; return; }
+      sec.value=''; tok.value='';
+      sec.placeholder='השאירו ריק כדי לא לשנות'; tok.placeholder='השאירו ריק כדי לא לשנות';
+      document.getElementById('fbSecOk').hidden = !r.secret;
+      document.getElementById('fbTokOk').hidden = !r.token;
+      msg.textContent='נשמר ✓'; setTimeout(function(){ msg.textContent=''; }, 2000);
     });
   });
 
