@@ -271,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === 'commit'
         $revStatus = [];
         foreach ($ST_LBL as $k => $v) { $revStatus[$k] = $k; $revStatus[$v] = $k; }
 
-        $added = 0; $dup = 0; $bad = 0; $lines = [];
+        $added = 0; $dup = 0; $bad = 0; $lines = []; $newIds = [];
         foreach ($rows as $i => $r) {
             if ($i === 0 && $hasHeader) continue;
             $get = function($f) use ($r, $map) {
@@ -305,6 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === 'commit'
                 'imported' => 1,
             ];
             $lines[] = json_encode($lead, JSON_UNESCAPED_UNICODE);
+            $newIds[] = $id;
 
             $st = $get('status');
             $statusMap[$id] = ($st !== '' && isset($revStatus[$st])) ? $revStatus[$st] : $defStatus;
@@ -320,11 +321,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === 'commit'
             @file_put_contents($LEADS, implode("\n", $lines) . "\n", FILE_APPEND | LOCK_EX);
             jsave($STATUS, $statusMap);
             jsave($NOTES, $notesMap);
+            jsave($DATA . '/import_last.json', [
+                'at'   => date('Y-m-d H:i'),
+                'file' => $saved['file'] ?? '',
+                'ids'  => $newIds,
+            ]);
         }
         @unlink($tmpF);
         $result = ['added' => $added, 'dup' => $dup, 'bad' => $bad, 'file' => $saved['file'] ?? ''];
         $step   = 'done';
     }
+}
+
+/* ========== (3) التراجع عن آخر استيراد ========== */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === 'undo') {
+    if (!csrf_ok()) {
+        $err = 'פג תוקף הדף — רעננו ונסו שוב.';
+    } else {
+        $last = jload($DATA . '/import_last.json');
+        $ids  = array_flip((array)($last['ids'] ?? []));
+        $gone = 0;
+        if ($ids && is_file($LEADS)) {
+            $keep = [];
+            foreach ((array)file($LEADS, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $ln) {
+                $o = json_decode($ln, true);
+                if (is_array($o) && isset($ids[$o['id'] ?? ''])) { $gone++; continue; }
+                $keep[] = $ln;
+            }
+            @file_put_contents($LEADS, $keep ? implode("\n", $keep) . "\n" : '', LOCK_EX);
+
+            $st = jload($STATUS); $nt = jload($NOTES);
+            foreach (array_keys($ids) as $gid) { unset($st[$gid], $nt[$gid]); }
+            jsave($STATUS, $st); jsave($NOTES, $nt);
+        }
+        @unlink($DATA . '/import_last.json');
+        $result = ['undone' => $gone, 'file' => $last['file'] ?? ''];
+        $step   = 'undone';
+    }
+}
+
+/* آخر استيراد (لعرض زر التراجع خلال 24 ساعة) */
+$lastImport = null;
+if (is_file($DATA . '/import_last.json') && @filemtime($DATA . '/import_last.json') > time() - 86400) {
+    $li = jload($DATA . '/import_last.json');
+    if (!empty($li['ids'])) $lastImport = $li;
 }
 
 $FIELDS = [
@@ -377,6 +417,10 @@ $FIELDS = [
   .stat b{display:block;font-size:1.6rem;color:var(--teal);line-height:1.1}
   .stat span{font-size:.82rem;color:var(--muted)}
   .hint{color:var(--muted);font-size:.83rem;line-height:1.7;margin-top:14px}
+  .undo{margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .undo button{background:#fff;border:1px solid #e6b7b1;color:#c0392b;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;font-family:inherit;font-size:.9rem}
+  .undo button:hover{background:#fdecea}
+  .undo span{color:var(--muted);font-size:.83rem}
 </style>
 </head>
 <body>
@@ -402,6 +446,18 @@ $FIELDS = [
     </form>
     <p class="hint">שום דבר לא נשמר ב־CRM בשלב זה — בשלב הבא תראו תצוגה מקדימה ותאשרו.</p>
   </div>
+  <?php if ($lastImport): ?>
+  <div class="card">
+    <h2>הייבוא האחרון</h2>
+    <p class="sub"><b><?= count($lastImport['ids']) ?></b> לידים מהקובץ <b><?= h($lastImport['file']) ?></b> · <?= h($lastImport['at']) ?></p>
+    <form method="post" class="undo" onsubmit="return confirm('למחוק את הלידים שיובאו בפעם האחרונה?')">
+      <input type="hidden" name="csrf" value="<?= h(csrf()) ?>">
+      <input type="hidden" name="step" value="undo">
+      <button type="submit">↺ ביטול הייבוא האחרון</button>
+      <span>אפשרי עד 24 שעות מהייבוא.</span>
+    </form>
+  </div>
+  <?php endif; ?>
 
 <?php elseif ($step === 'map'):
   $header  = $rows[0] ?? [];
@@ -461,6 +517,13 @@ $FIELDS = [
     </form>
   </div>
 
+<?php elseif ($step === 'undone' && $result): ?>
+  <div class="card">
+    <h2>הייבוא בוטל</h2>
+    <p class="sub">נמחקו <b><?= (int)$result['undone'] ?></b> לידים שיובאו מהקובץ <b><?= h($result['file']) ?></b>.</p>
+    <p><a class="back" href="import.php">→ ייבוא מחדש</a> &nbsp;·&nbsp; <a class="back" href="index.php">חזרה ל־CRM</a></p>
+  </div>
+
 <?php elseif ($step === 'done' && $result): ?>
   <div class="card">
     <h2>הייבוא הושלם</h2>
@@ -469,6 +532,14 @@ $FIELDS = [
     <div class="stat"><b><?= (int)$result['dup'] ?></b><span>דילוג — טלפון קיים</span></div>
     <div class="stat"><b><?= (int)$result['bad'] ?></b><span>שורות ריקות / לא תקינות</span></div>
     <p style="margin-top:18px"><a class="back" href="index.php">→ למעבר ל־CRM ולצפייה בלידים</a> &nbsp;·&nbsp; <a class="back" href="import.php">ייבוא קובץ נוסף</a></p>
+    <?php if ((int)$result['added'] > 0): ?>
+    <form method="post" class="undo" onsubmit="return confirm('לבטל את הייבוא ולמחוק את הלידים שנוספו כרגע?')">
+      <input type="hidden" name="csrf" value="<?= h(csrf()) ?>">
+      <input type="hidden" name="step" value="undo">
+      <button type="submit">↺ ביטול הייבוא ומחיקת <?= (int)$result['added'] ?> הלידים שנוספו</button>
+      <span>אם המיפוי יצא שגוי — אפשר לבטל ולהתחיל מחדש.</span>
+    </form>
+    <?php endif; ?>
   </div>
 <?php endif; ?>
 
