@@ -156,6 +156,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
         echo json_encode(['ok'=>true, 'id'=>$lid]); exit;
     }
+    if ($_POST['action'] === 'lead_edit') {
+        $lid   = (string)($_POST['lead_id'] ?? '');
+        $name  = note_clean($_POST['name']  ?? '');
+        $phone = note_clean($_POST['phone'] ?? '');
+        if ($lid === '')   { echo json_encode(['ok'=>false, 'error'=>'no_id']);    exit; }
+        if ($name === '')  { echo json_encode(['ok'=>false, 'error'=>'no_name']);  exit; }
+        if (strlen(preg_replace('/\D/', '', $phone)) < 7) { echo json_encode(['ok'=>false, 'error'=>'bad_phone']); exit; }
+
+        $leads = load_leads($LEADS);
+        $found = false;
+        foreach ($leads as $i => $l) {
+            if (($l['id'] ?? '') !== $lid) continue;
+            $leads[$i]['name']     = $name;
+            $leads[$i]['phone']    = $phone;
+            $leads[$i]['email']    = note_clean($_POST['email']    ?? '');
+            $leads[$i]['interest'] = note_clean($_POST['interest'] ?? '');
+            $leads[$i]['msg']      = note_clean($_POST['msg']      ?? '');
+            $leads[$i]['source']   = note_clean($_POST['source']   ?? '') ?: ($l['source'] ?? '');
+            $leads[$i]['edited']   = date('Y-m-d H:i');
+            $found = true;
+            break;
+        }
+        if (!$found) { echo json_encode(['ok'=>false, 'error'=>'not_found']); exit; }
+
+        $lines = array_map(fn($l) => json_encode($l, JSON_UNESCAPED_UNICODE), $leads);
+        @file_put_contents($LEADS, $lines ? implode("\n", $lines) . "\n" : '', LOCK_EX);
+
+        if (in_array($_POST['status'] ?? '', array_keys($ST_LBL), true)) {
+            $st = load_status($STATUS); $st[$lid] = $_POST['status']; save_status($STATUS, $st);
+        }
+        $note = note_clean($_POST['note'] ?? '');
+        if ($note !== '') {
+            $nt = load_notes($NOTES);
+            $nt[$lid][] = ['id' => bin2hex(random_bytes(4)), 't' => date('Y-m-d H:i'), 'txt' => $note];
+            save_notes($NOTES, $nt);
+        }
+        echo json_encode(['ok'=>true]); exit;
+    }
     if ($_POST['action'] === 'note_add') {
         $txt = note_clean($_POST['text'] ?? '');
         if ($id === '' || $txt === '') { echo json_encode(['ok'=>false]); exit; }
@@ -322,6 +360,9 @@ foreach ($leads as $l) {
   .st-contacted{background:#e5f0ff;color:#1857b8}
   .st-done{background:#e4f6ec;color:#1c7a45}
   .del{background:none;border:0;color:#c0392b;cursor:pointer;font-size:1.05rem;padding:4px 8px;border-radius:8px}
+  td.acts{white-space:nowrap}
+  .edt{background:none;border:0;color:var(--teal);cursor:pointer;font-size:1.05rem;padding:4px 8px;border-radius:8px}
+  .edt:hover{background:var(--pale)}
   .del:hover{background:#fdeceA;background:#fdecea}
   .empty{padding:50px 20px;text-align:center;color:var(--muted)}
   .src{font-size:.8rem;color:var(--muted)}
@@ -449,7 +490,9 @@ foreach ($leads as $l) {
         <?php foreach ($leads as $l):
           $id=$l['id']??''; $s=$status[$id]??'new'; $ns=$notes[$id]??[];
           $ntxt=''; foreach ($ns as $n) $ntxt .= ' ' . ($n['txt'] ?? ''); ?>
-        <tr class="lead<?= $ns ? ' has-notes' : '' ?>" data-id="<?= h($id) ?>" data-status="<?= h($s) ?>" data-notes="<?= h(trim($ntxt)) ?>">
+        <tr class="lead<?= $ns ? ' has-notes' : '' ?>" data-id="<?= h($id) ?>" data-status="<?= h($s) ?>" data-notes="<?= h(trim($ntxt)) ?>"
+            data-name="<?= h($l['name']??'') ?>" data-phone="<?= h($l['phone']??'') ?>" data-email="<?= h($l['email']??'') ?>"
+            data-interest="<?= h($l['interest']??'') ?>" data-msg="<?= h($l['msg']??'') ?>" data-source="<?= h($l['source']??'') ?>">
           <td style="white-space:nowrap"><?= h($l['ts']??'') ?></td>
           <td><?= h($l['name']??'') ?></td>
           <td style="white-space:nowrap"><?php if(!empty($l['phone'])): ?><a class="lnk" dir="ltr" href="tel:<?= h(preg_replace('/[^0-9+]/','',$l['phone'])) ?>"><?= h($l['phone']) ?></a><?php endif; ?></td>
@@ -463,7 +506,10 @@ foreach ($leads as $l) {
               <?php foreach($ST_LBL as $k=>$v): ?><option value="<?= h($k) ?>"<?= $s===$k?' selected':'' ?>><?= h($v) ?></option><?php endforeach; ?>
             </select>
           </td>
-          <td><button class="del" data-id="<?= h($id) ?>" title="מחיקה">🗑</button></td>
+          <td class="acts">
+            <button type="button" class="edt" data-id="<?= h($id) ?>" title="עריכת פרטי הליד">✎</button>
+            <button class="del" data-id="<?= h($id) ?>" title="מחיקת הליד">🗑</button>
+          </td>
         </tr>
         <tr class="nrow" hidden>
           <td colspan="10">
@@ -498,8 +544,9 @@ foreach ($leads as $l) {
   </div>
   <div class="modal" id="leadModal" hidden>
     <div class="mbox">
-      <h3>הוספת ליד חדש</h3>
+      <h3 id="leadTitle">הוספת ליד חדש</h3>
       <form id="leadForm" autocomplete="off">
+        <input type="hidden" name="lead_id" value="">
         <div class="mgrid">
           <label>שם מלא *<input name="name" required></label>
           <label>טלפון *<input name="phone" inputmode="tel" required dir="ltr"></label>
@@ -513,7 +560,7 @@ foreach ($leads as $l) {
           </label>
         </div>
         <label>הודעה<textarea name="msg" rows="2"></textarea></label>
-        <label>הערה ראשונה (אופציונלי)<textarea name="note" rows="2" placeholder="למשל: פנה בטלפון, מעוניין בהשתלה"></textarea></label>
+        <label><span id="noteLbl">הערה ראשונה (אופציונלי)</span><textarea name="note" rows="2" placeholder="למשל: פנה בטלפון, מעוניין בהשתלה"></textarea></label>
         <div class="mact">
           <button type="submit" class="save">הוספת הליד</button>
           <button type="button" class="cancel">ביטול</button>
@@ -582,35 +629,63 @@ foreach ($leads as $l) {
     });
   });
 
-  // ליד חדש (הוספה ידנית)
+  // ליד: הוספה ידנית + עריכת פרטים (אותו חלון)
   var lModal = document.getElementById('leadModal'),
       lForm  = document.getElementById('leadForm'),
-      lOpen  = document.getElementById('newLead');
+      lOpen  = document.getElementById('newLead'),
+      lTitle = document.getElementById('leadTitle'),
+      lId    = '';
+  function lField(n){ return lForm ? lForm.querySelector('[name='+n+']') : null; }
+  function lSet(n, v){ var el = lField(n); if(el) el.value = v || ''; }
   function leadClose(){ if(lModal) lModal.hidden = true; }
-  if(lOpen) lOpen.addEventListener('click', function(){
+  function leadOpen(tr){
+    if(!lModal) return;
+    lId = tr ? (tr.getAttribute('data-id') || '') : '';
+    var g = function(a){ return tr ? (tr.getAttribute('data-'+a) || '') : ''; };
+    lTitle.textContent = lId ? 'עריכת פרטי הליד' : 'הוספת ליד חדש';
+    lForm.querySelector('.save').textContent = lId ? 'שמירת השינויים' : 'הוספת הליד';
+    lForm.querySelector('.save').disabled = false;
+    lForm.querySelector('.mmsg').textContent = '';
+    document.getElementById('noteLbl').textContent = lId ? 'הוספת הערה (אופציונלי)' : 'הערה ראשונה (אופציונלי)';
+    lSet('lead_id', lId);
+    lSet('name', g('name'));
+    lSet('phone', g('phone'));
+    lSet('email', g('email'));
+    lSet('interest', g('interest'));
+    lSet('msg', g('msg'));
+    lSet('source', tr ? g('source') : 'הוספה ידנית');
+    lSet('note', '');
+    var st = lField('status'); if(st) st.value = tr ? (tr.getAttribute('data-status') || 'new') : 'new';
     lModal.hidden = false;
-    var f = lForm.querySelector('[name=name]'); if(f) f.focus();
+    var f = lField('name'); if(f) f.focus();
+  }
+  if(lOpen) lOpen.addEventListener('click', function(){ leadOpen(null); });
+  document.querySelectorAll('.edt').forEach(function(b){
+    b.addEventListener('click', function(){ leadOpen(b.closest('tr')); });
   });
   if(lModal){
     lModal.addEventListener('click', function(e){ if(e.target === lModal) leadClose(); });
     var cx = lModal.querySelector('.cancel'); if(cx) cx.addEventListener('click', leadClose);
-    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') leadClose(); });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && !lModal.hidden) leadClose(); });
   }
   if(lForm) lForm.addEventListener('submit', function(e){
     e.preventDefault();
-    var btn = lForm.querySelector('.save'), msg = lForm.querySelector('.mmsg'), data = {action:'lead_add'};
+    var btn = lForm.querySelector('.save'), msg = lForm.querySelector('.mmsg'),
+        data = {action: lId ? 'lead_edit' : 'lead_add'};
+    if(lId) data.lead_id = lId;
     ['name','phone','email','interest','source','status','msg','note'].forEach(function(k){
-      var el = lForm.querySelector('[name='+k+']');
+      var el = lField(k);
       data[k] = el ? el.value.trim() : '';
     });
     if(!data.name){ msg.textContent = 'נא למלא שם'; return; }
     if(data.phone.replace(/\D/g,'').length < 7){ msg.textContent = 'מספר טלפון לא תקין'; return; }
     btn.disabled = true; msg.textContent = 'שומר…';
     post(data).then(function(r){
-      if(r && r.ok){ msg.textContent = 'נוסף ✓'; location.reload(); return; }
+      if(r && r.ok){ msg.textContent = 'נשמר ✓'; location.reload(); return; }
       btn.disabled = false;
       msg.textContent = (r && r.error === 'bad_phone') ? 'מספר טלפון לא תקין'
-                      : (r && r.error === 'no_name')  ? 'נא למלא שם'
+                      : (r && r.error === 'no_name')   ? 'נא למלא שם'
+                      : (r && r.error === 'not_found') ? 'הליד לא נמצא — רעננו את הדף'
                       : 'שגיאה — נסו שוב';
     });
   });
