@@ -359,10 +359,15 @@ foreach ($leads as $l) {
   .st-new{background:#fff4e0;color:#a86400}
   .st-contacted{background:#e5f0ff;color:#1857b8}
   .st-done{background:#e4f6ec;color:#1c7a45}
-  .del{background:none;border:0;color:#c0392b;cursor:pointer;font-size:1.05rem;padding:4px 8px;border-radius:8px}
-  td.acts{white-space:nowrap}
-  .edt{background:none;border:0;color:var(--teal);cursor:pointer;font-size:1.05rem;padding:4px 8px;border-radius:8px}
-  .edt:hover{background:var(--pale)}
+  td.acts{white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -8px rgba(0,0,0,.25);z-index:2}
+  tr:hover td.acts{background:#fafdfd}
+  th.acth{position:sticky;right:0;z-index:3}
+  .edt,.del{border:1px solid var(--line);cursor:pointer;font-size:.8rem;font-weight:700;padding:6px 10px;border-radius:9px;font-family:inherit;display:inline-block;margin-inline-end:6px;white-space:nowrap}
+  .edt{background:var(--pale);color:var(--teal)}
+  .edt:hover{background:#e1f1f0}
+  .del{background:#fff;color:#c0392b;border-color:#eccfcb}
+  .del:hover{background:#fdecea}
+  td.itr{max-width:170px;white-space:normal;word-break:break-word;color:#3f4f4f}
   .del:hover{background:#fdeceA;background:#fdecea}
   .empty{padding:50px 20px;text-align:center;color:var(--muted)}
   .src{font-size:.8rem;color:var(--muted)}
@@ -484,7 +489,7 @@ foreach ($leads as $l) {
     <?php else: ?>
     <table id="tbl">
       <thead>
-        <tr><th>תאריך</th><th>שם</th><th>טלפון</th><th>דוא״ל</th><th>טיפול</th><th>הודעה</th><th>מקור</th><th>הערות</th><th>סטטוס</th><th></th></tr>
+        <tr><th class="acth">פעולות</th><th>תאריך</th><th>שם</th><th>טלפון</th><th>דוא״ל</th><th>טיפול</th><th>הודעה</th><th>מקור</th><th>הערות</th><th>סטטוס</th></tr>
       </thead>
       <tbody>
         <?php foreach ($leads as $l):
@@ -493,11 +498,15 @@ foreach ($leads as $l) {
         <tr class="lead<?= $ns ? ' has-notes' : '' ?>" data-id="<?= h($id) ?>" data-status="<?= h($s) ?>" data-notes="<?= h(trim($ntxt)) ?>"
             data-name="<?= h($l['name']??'') ?>" data-phone="<?= h($l['phone']??'') ?>" data-email="<?= h($l['email']??'') ?>"
             data-interest="<?= h($l['interest']??'') ?>" data-msg="<?= h($l['msg']??'') ?>" data-source="<?= h($l['source']??'') ?>">
+          <td class="acts">
+            <button type="button" class="edt" data-id="<?= h($id) ?>" title="עריכת פרטי הליד">✎ עריכה</button>
+            <button type="button" class="del" data-id="<?= h($id) ?>" title="מחיקת הליד">🗑 מחיקה</button>
+          </td>
           <td style="white-space:nowrap"><?= h($l['ts']??'') ?></td>
           <td><?= h($l['name']??'') ?></td>
           <td style="white-space:nowrap"><?php if(!empty($l['phone'])): ?><a class="lnk" dir="ltr" href="tel:<?= h(preg_replace('/[^0-9+]/','',$l['phone'])) ?>"><?= h($l['phone']) ?></a><?php endif; ?></td>
           <td><?php if(!empty($l['email'])): ?><a class="lnk" dir="ltr" href="mailto:<?= h($l['email']) ?>"><?= h($l['email']) ?></a><?php endif; ?></td>
-          <td><?= h($l['interest']??'') ?></td>
+          <td class="itr"><?= h($l['interest']??'') ?></td>
           <td class="msg"><?= h($l['msg']??'') ?></td>
           <td class="src"><?= h($l['source']??'') ?></td>
           <td><button type="button" class="nbtn" title="הצגת/הוספת הערות">📝 הערות <span class="ncount"><?= $ns ? '('.count($ns).')' : '' ?></span></button></td>
@@ -505,10 +514,6 @@ foreach ($leads as $l) {
             <select class="st st-<?= h($s) ?>" data-id="<?= h($id) ?>">
               <?php foreach($ST_LBL as $k=>$v): ?><option value="<?= h($k) ?>"<?= $s===$k?' selected':'' ?>><?= h($v) ?></option><?php endforeach; ?>
             </select>
-          </td>
-          <td class="acts">
-            <button type="button" class="edt" data-id="<?= h($id) ?>" title="עריכת פרטי הליד">✎</button>
-            <button class="del" data-id="<?= h($id) ?>" title="מחיקת הליד">🗑</button>
           </td>
         </tr>
         <tr class="nrow" hidden>
@@ -837,8 +842,9 @@ foreach ($leads as $l) {
 
   document.querySelectorAll('.del').forEach(function(b){
     b.addEventListener('click', function(){
-      if(!confirm('למחוק פנייה זו לצמיתות?')) return;
-      var id=b.getAttribute('data-id'), tr=b.closest('tr');
+      var id=b.getAttribute('data-id'), tr=b.closest('tr'),
+          nm=(tr.getAttribute('data-name')||'').trim();
+      if(!confirm('למחוק את הליד' + (nm ? ' „'+nm+'”' : '') + ' לצמיתות?\n\nיימחקו גם ההערות והסטטוס שלו. לא ניתן לשחזר.')) return;
       post({action:'delete', id:id}).then(function(r){
         if(!r.ok) return;
         var nr = tr.nextElementSibling;
