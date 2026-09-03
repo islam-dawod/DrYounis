@@ -264,6 +264,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $leads  = load_leads($LEADS);
 $status = load_status($STATUS);
 $notes  = load_notes($NOTES);
+
+/* ترقية لمرة واحدة: الحالة «טופל» (done) استُبدلت بـ«נקבע תור» (appointment).
+   أي قيمة لم تعد موجودة في قائمة الحالات تُنقل لأقرب مكافئ حتى لا يبقى ليد بحالة يتيمة. */
+$stFix = false;
+foreach ($status as $sk => $sv) {
+    if (isset($ST_LBL[$sv])) continue;
+    $status[$sk] = ($sv === 'done') ? 'appointment' : 'new';
+    $stFix = true;
+}
+if ($stFix) save_status($STATUS, $status);
 if (notes_ensure_ids($notes)) save_notes($NOTES, $notes); // ترقية لمرة واحدة: معرّف لكل ملاحظة قديمة
 usort($leads, fn($a,$b) => strcmp($b['id'] ?? '', $a['id'] ?? '')); // الأحدث أولاً
 $gads_key = is_file($DATA . '/gads_key.txt') ? trim(file_get_contents($DATA . '/gads_key.txt')) : '';
@@ -359,7 +369,6 @@ foreach ($leads as $l) {
   .st-new{background:#fff4e0;color:#a86400}
   .st-contacted{background:#e5f0ff;color:#1857b8}
   .st-appointment{background:#efe7fb;color:#5b3a9e}
-  .st-done{background:#e4f6ec;color:#1c7a45}
   .st-no_answer{background:#f6ece9;color:#8a5148}
   td.acts{white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -8px rgba(0,0,0,.25);z-index:2}
   tr:hover td.acts{background:#fafdfd}
