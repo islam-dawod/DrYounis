@@ -13,6 +13,17 @@ if (!defined('CRM_TZ')) {
     @date_default_timezone_set(CRM_TZ);
 }
 
+/* حالات الليد — مصدر واحد للحقيقة (تستعمله لوحة الـCRM وصفحة الاستيراد).
+   لإضافة حالة جديدة: أضف سطراً هنا (+ لون .st-<key> في index.php). */
+function crm_statuses() {
+    return [
+        'new'            => 'חדש',
+        'contacted'      => 'נוצר קשר',
+        'done'           => 'טופל',
+        'not_interested' => 'לא מעוניין',
+    ];
+}
+
 /* ---------------------------------------------------------------
    إعدادات ربط Facebook / Instagram (Lead Ads) — تُحفظ خارج مجلد النشر:
    { verify_token, key, app_secret, page_token }

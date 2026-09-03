@@ -16,13 +16,8 @@ $LEADS  = $DATA . '/leads.ndjson';    // سطر JSON لكل ليد
 $STATUS = $DATA . '/status.json';     // { id: "new"|"contacted"|"done"|"not_interested" }
 $NOTES  = $DATA . '/notes.json';      // { id: [ {"t":"2026-08-20 14:05","txt":"..."} , ... ] }
 
-/* حالات الليد — مكان واحد لإضافة/تعديل أي حالة (المفتاح => التسمية العبرية) */
-$ST_LBL = [
-    'new'            => 'חדש',
-    'contacted'      => 'נוצר קשר',
-    'done'           => 'טופל',
-    'not_interested' => 'לא מעוניין',
-];
+/* حالات الليد — معرّفة في store.php ليستعملها الاستيراد أيضاً */
+$ST_LBL = crm_statuses();
 
 /* ---------- أدوات ---------- */
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
@@ -263,6 +258,8 @@ foreach ($leads as $l) {
   .toolbar input[type=search]{min-width:240px;flex:1}
   .toolbar a.btn{background:var(--teal);color:#fff;text-decoration:none;padding:10px 16px;border-radius:10px;font-size:.9rem;font-weight:700}
   .toolbar a.btn:hover{background:#095657}
+  .toolbar a.btn.alt{background:#fff;color:var(--teal);border:1px solid var(--teal)}
+  .toolbar a.btn.alt:hover{background:var(--pale)}
   .table-card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:auto}
   table{width:100%;border-collapse:collapse;font-size:.92rem;min-width:900px}
   th,td{padding:12px 14px;text-align:right;border-bottom:1px solid var(--line);vertical-align:top}
@@ -388,6 +385,7 @@ foreach ($leads as $l) {
       <?php foreach ($ST_LBL as $k=>$v): ?><option value="<?= h($k) ?>"><?= h($v) ?></option><?php endforeach; ?>
     </select>
     <a class="btn" href="?export=csv">⬇ ייצוא CSV</a>
+    <a class="btn alt" href="import.php">⬆ ייבוא מקובץ</a>
   </div>
 
   <div class="table-card">
