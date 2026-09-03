@@ -355,10 +355,12 @@ foreach ($leads as $l) {
   a.lnk{color:var(--teal);text-decoration:none}
   a.lnk:hover{text-decoration:underline}
   .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.78rem;font-weight:700}
-  select.st{padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-family:inherit;font-size:.85rem;cursor:pointer}
+  select.st{padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-family:inherit;font-size:.85rem;cursor:pointer;max-width:165px}
   .st-new{background:#fff4e0;color:#a86400}
   .st-contacted{background:#e5f0ff;color:#1857b8}
+  .st-appointment{background:#efe7fb;color:#5b3a9e}
   .st-done{background:#e4f6ec;color:#1c7a45}
+  .st-no_answer{background:#f6ece9;color:#8a5148}
   td.acts{white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -8px rgba(0,0,0,.25);z-index:2}
   tr:hover td.acts{background:#fafdfd}
   th.acth{position:sticky;right:0;z-index:3}
