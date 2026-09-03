@@ -31,17 +31,57 @@ function csrf_ok(){ return isset($_POST['csrf'], $_SESSION['csrf']) && hash_equa
 function jload($f){ if (is_file($f)) { $j = json_decode((string)file_get_contents($f), true); if (is_array($j)) return $j; } return []; }
 function jsave($f, $a){ @file_put_contents($f, json_encode($a, JSON_UNESCAPED_UNICODE), LOCK_EX); }
 
-/* نص إلى UTF-8 (إكسل العبري يصدّر أحياناً بترميز Windows-1255) */
-function imp_utf8($s) {
-    $s = (string)$s;
-    if ($s === '' || !function_exists('mb_check_encoding') || mb_check_encoding($s, 'UTF-8')) return $s;
-    foreach (['CP1255', 'CP1256', 'ISO-8859-8'] as $enc) {
-        $c = @iconv($enc, 'UTF-8//IGNORE', $s);
+/* ---------------------------------------------------------------
+   الترميز — أهم جزء في الاستيراد:
+   * تصدير فيسبوك (Download leads) يخرج بترميز UTF-16، وبايتاته الصفرية
+     تجعل النص يبدو UTF-8 «صالحاً» فيمرّ بلا تحويل ويتحوّل العبري لرموز.
+     لذلك نكشف UTF-16 على مستوى الملف (BOM أو كثافة أصفار) قبل أي شيء.
+   * إكسل العبري يصدّر CSV بترميز Windows-1255.
+   * التحويل الاحتياطي يجري لكل خلية على حدة، فلا يُفسد بايت واحد الملف كله.
+   --------------------------------------------------------------- */
+function imp_from($v, $encs) {
+    foreach ($encs as $e) {
+        $c = @iconv($e, 'UTF-8//IGNORE', $v);
         if ($c !== false && $c !== '') return $c;
     }
-    return $s;
+    return null;
 }
-function imp_clean($v) { return trim(str_replace(["\r", "\n", "\t"], ' ', imp_utf8($v))); }
+
+function imp_decode_file($raw) {
+    if (strncmp($raw, "\xEF\xBB\xBF", 3) === 0) return substr($raw, 3);                                    // UTF-8 BOM
+    if (strncmp($raw, "\xFF\xFE", 2) === 0) return (string)@mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16LE');
+    if (strncmp($raw, "\xFE\xFF", 2) === 0) return (string)@mb_convert_encoding(substr($raw, 2), 'UTF-8', 'UTF-16BE');
+
+    // UTF-16 بلا BOM: نصف البايتات تقريباً أصفار
+    $sample = substr($raw, 0, 8192);
+    if (strlen($sample) > 8 && substr_count($sample, "\x00") > strlen($sample) / 8) {
+        $even = 0; $odd = 0;
+        for ($i = 0, $n = strlen($sample); $i < $n; $i++) {
+            if ($sample[$i] === "\x00") { ($i % 2) ? $odd++ : $even++; }
+        }
+        $c = @mb_convert_encoding($raw, 'UTF-8', ($odd >= $even) ? 'UTF-16LE' : 'UTF-16BE');
+        if ($c !== false && $c !== '') return $c;
+    }
+    if (mb_check_encoding($raw, 'UTF-8')) return $raw;
+    $c = imp_from($raw, ['CP1255', 'CP1256', 'ISO-8859-8', 'Windows-1252']);
+    return $c !== null ? $c : $raw;
+}
+
+/* خلية واحدة: تصحيح ترميز إن لزم + إزالة أحرف التحكّم (منها البايت الصفري) */
+function imp_cell($v) {
+    $v = (string)$v;
+    if ($v === '') return '';
+    if (!mb_check_encoding($v, 'UTF-8')) {
+        $c = imp_from($v, ['CP1255', 'CP1256', 'ISO-8859-8', 'Windows-1252']);
+        if ($c !== null) $v = $c;
+    }
+    $v = preg_replace('/[^\P{C}\n\t]+/u', '', $v);
+    return trim(str_replace(["\r", "\n", "\t"], ' ', (string)$v));
+}
+
+/* للتوافق مع بقية الصفحة */
+function imp_utf8($s)  { return imp_cell($s); }
+function imp_clean($v) { return imp_cell($v); }
 
 /* آخر 9 أرقام من الهاتف — للمقارنة ومنع التكرار */
 function imp_phone_key($p) {
@@ -51,6 +91,8 @@ function imp_phone_key($p) {
 /* إكسل يحوّل 0501234567 إلى رقم ويحذف الصفر — نعيده */
 function imp_phone_fix($p) {
     $p = trim((string)$p);
+    // تصدير فيسبوك يكتب الهاتف كـ p:+972501234567
+    $p = trim(preg_replace('/^\s*p\s*:\s*/i', '', $p));
     if ($p === '') return '';
     if (preg_match('/^5\d{8}$/', $p)) return '0' . $p;         // 501234567  => 0501234567
     if (preg_match('/^9725\d{8}$/', $p)) return '+' . $p;      // 972501234567
@@ -58,7 +100,7 @@ function imp_phone_fix($p) {
 }
 /* تاريخ إكسل الرقمي (serial) إلى نص */
 function imp_date($v) {
-    $v = trim((string)$v);
+    $v = imp_cell($v);
     if ($v === '') return '';
     if (preg_match('/^\d{5}(\.\d+)?$/', $v)) {                  // serial: 45678.5
         $ts = ((float)$v - 25569) * 86400;
@@ -113,7 +155,7 @@ function imp_read_xlsx($path) {
             if     ($t === 's')         $v = $shared[(int)$c->v] ?? '';
             elseif ($t === 'inlineStr') $v = (string)($c->is->t ?? '');
             else                        $v = (string)($c->v ?? '');
-            $cells[$col] = trim($v);
+            $cells[$col] = imp_cell($v);
         }
         if ($cells) {
             $max = max(array_keys($cells)); $out = [];
@@ -128,9 +170,7 @@ function imp_read_xlsx($path) {
 }
 
 function imp_read_csv($path) {
-    $txt = (string)file_get_contents($path);
-    $txt = preg_replace('/^\xEF\xBB\xBF/', '', $txt);
-    $txt = imp_utf8($txt);
+    $txt = imp_decode_file((string)file_get_contents($path));
 
     $firstLine = strtok($txt, "\n");
     $best = ','; $bestCount = -1;
@@ -145,7 +185,7 @@ function imp_read_csv($path) {
     $rows = [];
     while (($r = fgetcsv($tmp, 0, $best)) !== false) {
         if ($r === [null]) continue;                 // سطر فارغ
-        $rows[] = array_map(fn($v) => trim((string)$v), $r);
+        $rows[] = array_map('imp_cell', $r);
         if (count($rows) > IMP_MAX_ROWS) break;
     }
     fclose($tmp);
@@ -321,14 +361,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === 'commit'
             @file_put_contents($LEADS, implode("\n", $lines) . "\n", FILE_APPEND | LOCK_EX);
             jsave($STATUS, $statusMap);
             jsave($NOTES, $notesMap);
-            jsave($DATA . '/import_last.json', [
+            $batches = jload($DATA . '/import_batches.json');
+            if (!isset($batches['list']) || !is_array($batches['list'])) $batches = ['list' => []];
+            $batches['list'][] = [
+                'bid'  => bin2hex(random_bytes(6)),
                 'at'   => date('Y-m-d H:i'),
+                'time' => time(),
                 'file' => $saved['file'] ?? '',
                 'ids'  => $newIds,
-            ]);
+            ];
+            if (count($batches['list']) > 10) $batches['list'] = array_slice($batches['list'], -10);
+            jsave($DATA . '/import_batches.json', $batches);
         }
         @unlink($tmpF);
-        $result = ['added' => $added, 'dup' => $dup, 'bad' => $bad, 'file' => $saved['file'] ?? ''];
+        $bidNew = '';
+        if (!empty($batches['list'])) {
+            $lastB  = end($batches['list']);
+            $bidNew = $lastB['bid'] ?? '';
+        }
+        $result = ['added' => $added, 'dup' => $dup, 'bad' => $bad, 'file' => $saved['file'] ?? '', 'bid' => $bidNew];
         $step   = 'done';
     }
 }
@@ -338,7 +389,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === 'undo') 
     if (!csrf_ok()) {
         $err = 'פג תוקף הדף — רעננו ונסו שוב.';
     } else {
-        $last = jload($DATA . '/import_last.json');
+        $bid     = preg_replace('/[^a-z0-9]/', '', (string)($_POST['bid'] ?? ''));
+        $batches = jload($DATA . '/import_batches.json');
+        $list    = (isset($batches['list']) && is_array($batches['list'])) ? $batches['list'] : [];
+        $last    = null;
+
+        if ($bid === 'legacy') {                       // استيراد نُفِّذ قبل إضافة السجل
+            $last = jload($DATA . '/import_last.json');
+        } else {
+            foreach ($list as $k => $b) {
+                if (($b['bid'] ?? '') === $bid) { $last = $b; unset($list[$k]); break; }
+            }
+            if ($last === null && $bid === '' && $list) {   // بلا معرّف: آخر دفعة
+                $last = array_pop($list);
+            }
+        }
         $ids  = array_flip((array)($last['ids'] ?? []));
         $gone = 0;
         if ($ids && is_file($LEADS)) {
@@ -354,18 +419,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['step'] ?? '') === 'undo') 
             foreach (array_keys($ids) as $gid) { unset($st[$gid], $nt[$gid]); }
             jsave($STATUS, $st); jsave($NOTES, $nt);
         }
-        @unlink($DATA . '/import_last.json');
+        if ($bid === 'legacy') {
+            @unlink($DATA . '/import_last.json');
+        } else {
+            jsave($DATA . '/import_batches.json', ['list' => array_values($list)]);
+        }
         $result = ['undone' => $gone, 'file' => $last['file'] ?? ''];
         $step   = 'undone';
     }
 }
 
-/* آخر استيراد (لعرض زر التراجع خلال 24 ساعة) */
-$lastImport = null;
-if (is_file($DATA . '/import_last.json') && @filemtime($DATA . '/import_last.json') > time() - 86400) {
-    $li = jload($DATA . '/import_last.json');
-    if (!empty($li['ids'])) $lastImport = $li;
+/* دفعات الاستيراد الأخيرة (لإمكانية التراجع خلال 7 أيام) */
+$recent = [];
+$bfile  = $DATA . '/import_batches.json';
+if (is_file($bfile)) {
+    $bb = jload($bfile);
+    foreach ((array)($bb['list'] ?? []) as $b) {
+        if (!empty($b['ids']) && (int)($b['time'] ?? 0) > time() - 604800) $recent[] = $b;
+    }
 }
+if (is_file($DATA . '/import_last.json')) {           // دفعة من قبل إضافة السجل
+    $li = jload($DATA . '/import_last.json');
+    if (!empty($li['ids'])) {
+        $li['bid'] = 'legacy';
+        $recent[]  = $li;
+    }
+}
+$recent = array_reverse($recent);
 
 $FIELDS = [
     'name'     => 'שם',
@@ -446,16 +526,19 @@ $FIELDS = [
     </form>
     <p class="hint">שום דבר לא נשמר ב־CRM בשלב זה — בשלב הבא תראו תצוגה מקדימה ותאשרו.</p>
   </div>
-  <?php if ($lastImport): ?>
+  <?php if ($recent): ?>
   <div class="card">
-    <h2>הייבוא האחרון</h2>
-    <p class="sub"><b><?= count($lastImport['ids']) ?></b> לידים מהקובץ <b><?= h($lastImport['file']) ?></b> · <?= h($lastImport['at']) ?></p>
-    <form method="post" class="undo" onsubmit="return confirm('למחוק את הלידים שיובאו בפעם האחרונה?')">
+    <h2>ייבואים אחרונים</h2>
+    <p class="sub">אפשר לבטל ייבוא ולמחוק בדיוק את הלידים שנוספו בו (עד 7 ימים).</p>
+    <?php foreach ($recent as $b): ?>
+    <form method="post" class="undo" onsubmit="return confirm('למחוק את הלידים של הייבוא הזה?')">
       <input type="hidden" name="csrf" value="<?= h(csrf()) ?>">
       <input type="hidden" name="step" value="undo">
-      <button type="submit">↺ ביטול הייבוא האחרון</button>
-      <span>אפשרי עד 24 שעות מהייבוא.</span>
+      <input type="hidden" name="bid" value="<?= h($b['bid'] ?? '') ?>">
+      <button type="submit">↺ ביטול</button>
+      <span><b><?= count($b['ids']) ?></b> לידים · <?= h($b['file'] ?? '') ?> · <?= h($b['at'] ?? '') ?></span>
     </form>
+    <?php endforeach; ?>
   </div>
   <?php endif; ?>
 
@@ -536,6 +619,7 @@ $FIELDS = [
     <form method="post" class="undo" onsubmit="return confirm('לבטל את הייבוא ולמחוק את הלידים שנוספו כרגע?')">
       <input type="hidden" name="csrf" value="<?= h(csrf()) ?>">
       <input type="hidden" name="step" value="undo">
+      <input type="hidden" name="bid" value="<?= h($result['bid'] ?? '') ?>">
       <button type="submit">↺ ביטול הייבוא ומחיקת <?= (int)$result['added'] ?> הלידים שנוספו</button>
       <span>אם המיפוי יצא שגוי — אפשר לבטל ולהתחיל מחדש.</span>
     </form>
