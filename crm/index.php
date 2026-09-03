@@ -313,12 +313,12 @@ foreach ($leads as $l) {
   :root{--teal:#0B6F70;--teal2:#1AADAD;--pale:#EFF8F7;--ink:#231F20;--line:#e3edec;--muted:#6a7a7a}
   *{box-sizing:border-box}
   body{margin:0;font-family:"Heebo",Arial,sans-serif;background:#f4f8f8;color:var(--ink)}
-  .top{background:var(--teal);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .top{background:var(--teal);color:#fff;padding:14px 26px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .top h1{font-size:1.15rem;margin:0;font-weight:800}
   .top .spacer{flex:1}
   .top a.logout{color:#fff;text-decoration:none;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:999px;font-size:.9rem}
   .top a.logout:hover{background:rgba(255,255,255,.28)}
-  .wrap{max-width:1200px;margin:0 auto;padding:20px}
+  .wrap{max-width:2000px;margin:0 auto;padding:20px 26px}
   .stats{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
   .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 18px;min-width:130px}
   .stat b{display:block;font-size:1.7rem;color:var(--teal);line-height:1}
@@ -351,7 +351,7 @@ foreach ($leads as $l) {
   th,td{padding:12px 14px;text-align:right;border-bottom:1px solid var(--line);vertical-align:top}
   th{background:var(--pale);color:var(--teal);font-weight:700;white-space:nowrap;position:sticky;top:0}
   tr:hover td{background:#fafdfd}
-  td.msg{max-width:280px;white-space:pre-wrap;word-break:break-word;color:#3f4f4f}
+  td.msg{max-width:360px;white-space:pre-wrap;word-break:normal;overflow-wrap:break-word;color:#3f4f4f}
   a.lnk{color:var(--teal);text-decoration:none}
   a.lnk:hover{text-decoration:underline}
   .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.78rem;font-weight:700}
@@ -367,7 +367,7 @@ foreach ($leads as $l) {
   .edt:hover{background:#e1f1f0}
   .del{background:#fff;color:#c0392b;border-color:#eccfcb}
   .del:hover{background:#fdecea}
-  td.itr{max-width:170px;white-space:normal;word-break:break-word;color:#3f4f4f}
+  td.itr{max-width:260px;white-space:normal;word-break:normal;overflow-wrap:break-word;color:#3f4f4f}
   .del:hover{background:#fdeceA;background:#fdecea}
   .empty{padding:50px 20px;text-align:center;color:var(--muted)}
   .src{font-size:.8rem;color:var(--muted)}
