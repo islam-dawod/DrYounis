@@ -106,22 +106,22 @@
   .foot a{color:var(--teal);text-decoration:none}
 .skip-link{position:absolute;top:-48px;inset-inline-start:0;z-index:200;background:#0B6F70;color:#fff;padding:10px 16px;border-radius:0 0 10px 0;transition:top .15s}.skip-link:focus{top:0}
   /* ===== אנימציות כניסה ===== */
-  @keyframes dropIn{from{opacity:0;transform:translate3d(0,-38px,0)}to{opacity:1;transform:none}}
-  @keyframes riseIn{from{opacity:0;transform:translate3d(0,24px,0)}to{opacity:1;transform:none}}
+  @keyframes dropIn{from{opacity:0;transform:translate3d(0,-70px,0)}to{opacity:1;transform:none}}
+  @keyframes riseIn{from{opacity:0;transform:translate3d(0,40px,0)}to{opacity:1;transform:none}}
   @keyframes panelIn{from{opacity:0;transform:translate3d(0,18px,0) scale(.985)}to{opacity:1;transform:none}}
   html.js .panel{animation:panelIn .55s cubic-bezier(.22,.9,.28,1) both}
   /* הלוגו והתמונה — יורדים מלמעלה */
-  html.js .hero .logo  {animation:dropIn .75s cubic-bezier(.2,.85,.3,1) .10s both}
-  html.js .hero .avatar{animation:dropIn .85s cubic-bezier(.2,.85,.3,1) .22s both}
+  html.js .hero .logo  {animation:dropIn 1s cubic-bezier(.2,.85,.3,1) .25s both}
+  html.js .hero .avatar{animation:dropIn 1.05s cubic-bezier(.2,.85,.3,1) .45s both}
   /* הטקסט מתחתיהם — עולה מלמטה */
-  html.js .hero .name   {animation:riseIn .6s ease-out .48s both}
-  html.js .hero .name-he{animation:riseIn .6s ease-out .56s both}
-  html.js .hero .role   {animation:riseIn .6s ease-out .64s both}
-  html.js .hero .rating {animation:riseIn .6s ease-out .72s both}
+  html.js .hero .name   {animation:riseIn .7s ease-out .75s both}
+  html.js .hero .name-he{animation:riseIn .7s ease-out .85s both}
+  html.js .hero .role   {animation:riseIn .7s ease-out .95s both}
+  html.js .hero .rating {animation:riseIn .7s ease-out 1.05s both}
   /* כל מה שמתחת לכותרת — עולה מלמטה בכניסה למסך */
-  html.js .reveal{opacity:0;transform:translate3d(0,30px,0);will-change:opacity,transform}
+  html.js .reveal{opacity:0;transform:translate3d(0,44px,0);will-change:opacity,transform}
   html.js .reveal.in{opacity:1;transform:none;
-    transition:opacity .6s ease-out,transform .65s cubic-bezier(.22,.9,.28,1)}
+    transition:opacity .7s ease-out,transform .75s cubic-bezier(.22,.9,.28,1)}
   @media(prefers-reduced-motion:reduce){
     html.js .panel,html.js .hero .logo,html.js .hero .avatar,html.js .hero .name,
     html.js .hero .name-he,html.js .hero .role,html.js .hero .rating{animation:none}
