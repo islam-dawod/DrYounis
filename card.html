@@ -28,6 +28,7 @@
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18303019351"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','AW-18303019351');gtag('config','G-NSVPGZDLZ9');</script>
+<script>document.documentElement.className+=' js';</script>
 <style>
   :root{--teal:#0B6F70;--teal2:#1AADAD;--gold:#C8A65A;--mint:#EFF8F7;--ink:#231F20;--muted:#6a7a7a;--line:#e3edec}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -104,6 +105,28 @@
   .foot{text-align:center;color:var(--muted);font-size:.72rem;padding:14px 10px 0}
   .foot a{color:var(--teal);text-decoration:none}
 .skip-link{position:absolute;top:-48px;inset-inline-start:0;z-index:200;background:#0B6F70;color:#fff;padding:10px 16px;border-radius:0 0 10px 0;transition:top .15s}.skip-link:focus{top:0}
+  /* ===== אנימציות כניסה ===== */
+  @keyframes dropIn{from{opacity:0;transform:translate3d(0,-38px,0)}to{opacity:1;transform:none}}
+  @keyframes riseIn{from{opacity:0;transform:translate3d(0,24px,0)}to{opacity:1;transform:none}}
+  @keyframes panelIn{from{opacity:0;transform:translate3d(0,18px,0) scale(.985)}to{opacity:1;transform:none}}
+  html.js .panel{animation:panelIn .55s cubic-bezier(.22,.9,.28,1) both}
+  /* הלוגו והתמונה — יורדים מלמעלה */
+  html.js .hero .logo  {animation:dropIn .75s cubic-bezier(.2,.85,.3,1) .10s both}
+  html.js .hero .avatar{animation:dropIn .85s cubic-bezier(.2,.85,.3,1) .22s both}
+  /* הטקסט מתחתיהם — עולה מלמטה */
+  html.js .hero .name   {animation:riseIn .6s ease-out .48s both}
+  html.js .hero .name-he{animation:riseIn .6s ease-out .56s both}
+  html.js .hero .role   {animation:riseIn .6s ease-out .64s both}
+  html.js .hero .rating {animation:riseIn .6s ease-out .72s both}
+  /* כל מה שמתחת לכותרת — עולה מלמטה בכניסה למסך */
+  html.js .reveal{opacity:0;transform:translate3d(0,30px,0);will-change:opacity,transform}
+  html.js .reveal.in{opacity:1;transform:none;
+    transition:opacity .6s ease-out,transform .65s cubic-bezier(.22,.9,.28,1)}
+  @media(prefers-reduced-motion:reduce){
+    html.js .panel,html.js .hero .logo,html.js .hero .avatar,html.js .hero .name,
+    html.js .hero .name-he,html.js .hero .role,html.js .hero .rating{animation:none}
+    html.js .reveal,html.js .reveal.in{opacity:1;transform:none;transition:none}
+  }
 </style>
 </head>
 <body>
@@ -124,7 +147,7 @@
     </header>
 
     <!-- QUICK ACTIONS -->
-    <nav class="actions" aria-label="פעולות מהירות">
+    <nav class="actions reveal" aria-label="פעולות מהירות">
       <a class="act wa" href="https://wa.me/972543345333" target="_blank" rel="noopener noreferrer" data-track="whatsapp" aria-label="WhatsApp">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.4A10 10 0 1012 2zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.7 1.8c.1.2 0 .4-.1.5l-.3.4c-.1.2-.3.3-.1.6.1.3.7 1.1 1.4 1.7.9.8 1.7 1 2 1.2.2.1.4 0 .5-.1l.6-.7c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.1.1.6-.1 1z"/></svg>
         <span>WhatsApp</span></a>
@@ -140,7 +163,7 @@
     </nav>
 
     <!-- BOOK CTA -->
-    <div class="book">
+    <div class="book reveal">
       <a href="/contact#appointment" data-track="book">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
         קביעת תור
@@ -148,8 +171,8 @@
     </div>
 
     <!-- REVIEWS -->
-    <section class="sec"><h2>אמון ומוניטין</h2></section>
-    <div class="rev">
+    <section class="sec reveal"><h2>אמון ומוניטין</h2></section>
+    <div class="rev reveal">
       <div class="stars" aria-hidden="true">★★★★★</div>
       <div class="big">5.0</div>
       <div class="sub">דירוג מטופלים מאומת ב־MedReviews</div>
@@ -157,7 +180,7 @@
     </div>
 
     <!-- SERVICES -->
-    <section class="sec"><h2>תחומי טיפול</h2>
+    <section class="sec reveal"><h2>תחומי טיפול</h2>
       <div class="svcs">
         <a class="svc" href="/treatments/dental-implants"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2.5c1.6 0 2.8 1.2 2.8 2.8 0 1.2-.7 1.9-1.3 2.7H10.5c-.6-.8-1.3-1.5-1.3-2.7C9.2 3.7 10.4 2.5 12 2.5Z"/><path d="M12 8v13"/></svg><span>שתלים ושיקום</span></a>
         <a class="svc" href="/treatments/full-mouth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3c-3 0-4.5 1.6-6 1.6C4.4 4.6 3 6 3 9c0 4 1.6 6.4 2.6 9.4C6.2 20 6.8 21 7.7 21c1.2 0 1.3-2 1.8-3.6.3-1 .8-1.6 2.5-1.6s2.2.6 2.5 1.6c.5 1.6.6 3.6 1.8 3.6.9 0 1.5-1 2.1-2.6C19.4 15.4 21 13 21 9c0-3-1.4-4.4-3-4.4-1.5 0-3-1.6-6-1.6Z"/></svg><span>שיקום פה מלא</span></a>
@@ -167,8 +190,8 @@
     </section>
 
     <!-- CLINIC -->
-    <section class="sec"><h2>המרפאה</h2></section>
-    <div class="clinic">
+    <section class="sec reveal"><h2>המרפאה</h2></section>
+    <div class="clinic reveal">
       <img src="/assets/images/doctor-clinic.jpg" alt="מרפאת ד״ר תחסין יונס בחיפה" width="1280" height="960" decoding="async" loading="lazy">
       <div class="body">
         <b>מרפאת ד״ר תחסין יונס — חיפה</b>
@@ -181,21 +204,37 @@
     </div>
 
     <!-- SOCIAL -->
-    <div class="social" aria-label="רשתות חברתיות">
+    <div class="social reveal" aria-label="רשתות חברתיות">
       <a href="https://www.instagram.com/info.younisclinic/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></a>
       <a href="https://www.facebook.com/61584468176627/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 8h3V4h-3c-2.2 0-4 1.8-4 4v2H7v4h3v8h4v-8h3l1-4h-4V8a1 1 0 011-1z"/></svg></a>
     </div>
 
     <!-- QR -->
-    <div class="qr">
+    <div class="qr reveal">
       <img src="/assets/images/card-qr.png" alt="QR code לכרטיס הדיגיטלי" width="150" height="150">
       <p>שיתוף הכרטיס הדיגיטלי · younisclinic.com/card</p>
     </div>
 
-    <p class="foot">© <span id="yr">2026</span> מרפאת ד״ר תחסין יונס · <a href="https://younisclinic.com">younisclinic.com</a></p>
+    <p class="foot reveal">© <span id="yr">2026</span> מרפאת ד״ר תחסין יונס · <a href="https://younisclinic.com">younisclinic.com</a></p>
   </div>
 </main>
 <script>
+  /* חשיפה בגלילה — כל בלוק עולה מלמטה כשהוא נכנס למסך */
+  (function(){
+    var els = [].slice.call(document.querySelectorAll('.reveal'));
+    if(!els.length) return;
+    var show = function(el, d){ el.style.transitionDelay = (d||0) + 'ms'; el.classList.add('in'); };
+    if(!('IntersectionObserver' in window)){ els.forEach(function(e){ show(e, 0); }); return; }
+    var io = new IntersectionObserver(function(entries){
+      entries.filter(function(en){ return en.isIntersecting; })
+             .forEach(function(en, k){
+               show(en.target, Math.min(k, 5) * 90);   // מדרגות קטנות כשכמה נכנסים יחד
+               io.unobserve(en.target);
+             });
+    }, {threshold: .12, rootMargin: '0px 0px -6% 0px'});
+    els.forEach(function(e){ io.observe(e); });
+  })();
+
   var _y=document.getElementById('yr'); if(_y) _y.textContent=new Date().getFullYear();
   document.querySelectorAll('[data-track]').forEach(function(el){
     el.addEventListener('click',function(){ if(typeof gtag==='function') gtag('event','card_'+el.getAttribute('data-track')); });
