@@ -106,6 +106,7 @@
   .foot a{color:var(--teal);text-decoration:none}
 .skip-link{position:absolute;top:-48px;inset-inline-start:0;z-index:200;background:#0B6F70;color:#fff;padding:10px 16px;border-radius:0 0 10px 0;transition:top .15s}.skip-link:focus{top:0}
   /* ===== אנימציות כניסה ===== */
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   @keyframes dropIn{from{opacity:0;transform:translate3d(0,-70px,0)}to{opacity:1;transform:none}}
   @keyframes riseIn{from{opacity:0;transform:translate3d(0,40px,0)}to{opacity:1;transform:none}}
   @keyframes panelIn{from{opacity:0;transform:translate3d(0,18px,0) scale(.985)}to{opacity:1;transform:none}}
@@ -123,9 +124,16 @@
   html.js .reveal.in{opacity:1;transform:none;
     transition:opacity .7s ease-out,transform .75s cubic-bezier(.22,.9,.28,1)}
   @media(prefers-reduced-motion:reduce){
-    html.js .panel,html.js .hero .logo,html.js .hero .avatar,html.js .hero .name,
-    html.js .hero .name-he,html.js .hero .role,html.js .hero .rating{animation:none}
-    html.js .reveal,html.js .reveal.in{opacity:1;transform:none;transition:none}
+    /* בהעדפת תנועה מופחתת: רק עמעום עדין (ללא תנועה גדולה) — הדף לעולם לא נשאר קפוא */
+    html.js .panel{animation:fadeIn .6s ease both}
+    html.js .hero .logo  {animation:fadeIn .6s ease .10s both}
+    html.js .hero .avatar{animation:fadeIn .6s ease .20s both}
+    html.js .hero .name   {animation:fadeIn .5s ease .30s both}
+    html.js .hero .name-he{animation:fadeIn .5s ease .38s both}
+    html.js .hero .role   {animation:fadeIn .5s ease .46s both}
+    html.js .hero .rating {animation:fadeIn .5s ease .54s both}
+    html.js .reveal{opacity:0;transform:none}
+    html.js .reveal.in{opacity:1;transition:opacity .6s ease}
   }
 </style>
 </head>
