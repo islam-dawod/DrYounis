@@ -374,7 +374,7 @@ foreach ($leads as $l) {
   td.msg{max-width:360px;white-space:pre-wrap;word-break:normal;overflow-wrap:break-word;color:#3f4f4f}
   a.lnk{color:var(--teal);text-decoration:none}
   a.lnk:hover{text-decoration:underline}
-  a.walnk{color:#0f8f4c;font-weight:700;display:inline-flex;align-items:center;gap:5px;direction:ltr}
+  a.walnk{color:#0f8f4c;font-weight:700;display:inline-flex;align-items:center;gap:5px;direction:ltr;padding-left:10px}
   a.walnk:hover{text-decoration:none;color:#0b7d40}
   .waico{width:15px;height:15px;flex:0 0 auto}
   a.callbtn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-inline-end:5px;
