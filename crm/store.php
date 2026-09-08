@@ -20,6 +20,7 @@ function crm_statuses() {
         'new'            => 'חדש',
         'contacted'      => 'נוצר קשר',
         'appointment'    => 'נקבע תור',
+        'treated'        => 'קבל טיפול',
         'not_interested' => 'לא מעוניין',
         'no_answer'      => 'לא זמין / אין מענה',
     ];
