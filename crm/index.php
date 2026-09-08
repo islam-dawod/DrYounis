@@ -21,6 +21,16 @@ $ST_LBL = crm_statuses();
 
 /* ---------- أدوات ---------- */
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+/* رقم بصيغة WhatsApp الدولية (بلا + ولا أصفار) — افتراض إسرائيل +972 */
+function wa_number($p){
+    $d = preg_replace('/\D/', '', (string)$p);
+    if ($d === '') return '';
+    if (strpos($d, '00972') === 0) return substr($d, 2);        // 00972... => 972...
+    if (strpos($d, '972') === 0)   return $d;                    // 972... كما هو
+    if ($d[0] === '0')             return '972' . substr($d, 1); // 05x... => 9725x...
+    if (strlen($d) === 9 && $d[0] === '5') return '972' . $d;   // 5x... => 9725x...
+    return $d;                                                    // رقم دولي آخر — كما هو
+}
 function load_leads($f){
     $out = [];
     if (is_file($f)) {
@@ -364,6 +374,9 @@ foreach ($leads as $l) {
   td.msg{max-width:360px;white-space:pre-wrap;word-break:normal;overflow-wrap:break-word;color:#3f4f4f}
   a.lnk{color:var(--teal);text-decoration:none}
   a.lnk:hover{text-decoration:underline}
+  a.walnk{color:#0f8f4c;font-weight:700;display:inline-flex;align-items:center;gap:5px;direction:ltr}
+  a.walnk:hover{text-decoration:none;color:#0b7d40}
+  .waico{width:15px;height:15px;flex:0 0 auto}
   .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.78rem;font-weight:700}
   select.st{padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-family:inherit;font-size:.85rem;cursor:pointer;max-width:165px}
   .st-new{background:#fff4e0;color:#a86400}
@@ -516,7 +529,7 @@ foreach ($leads as $l) {
           </td>
           <td style="white-space:nowrap"><?= h($l['ts']??'') ?></td>
           <td><?= h($l['name']??'') ?></td>
-          <td style="white-space:nowrap"><?php if(!empty($l['phone'])): ?><a class="lnk" dir="ltr" href="tel:<?= h(preg_replace('/[^0-9+]/','',$l['phone'])) ?>"><?= h($l['phone']) ?></a><?php endif; ?></td>
+          <td style="white-space:nowrap"><?php if(!empty($l['phone'])): ?><a class="lnk walnk" dir="ltr" target="_blank" rel="noopener noreferrer" href="https://wa.me/<?= h(wa_number($l['phone'])) ?>" data-track="crm_wa" title="פתיחת WhatsApp עם הפונה"><svg class="waico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.4A10 10 0 1012 2zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.7 1.8c.1.2 0 .4-.1.5l-.3.4c-.1.2-.3.3-.1.6.1.3.7 1.1 1.4 1.7.9.8 1.7 1 2 1.2.2.1.4 0 .5-.1l.6-.7c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.1.1.6-.1 1z"/></svg><?= h($l['phone']) ?></a><?php endif; ?></td>
           <td><?php if(!empty($l['email'])): ?><a class="lnk" dir="ltr" href="mailto:<?= h($l['email']) ?>"><?= h($l['email']) ?></a><?php endif; ?></td>
           <td class="itr"><?= h($l['interest']??'') ?></td>
           <td class="msg"><?= h($l['msg']??'') ?></td>
