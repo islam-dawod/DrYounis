@@ -377,7 +377,7 @@ foreach ($leads as $l) {
   a.walnk{color:#0f8f4c;font-weight:700;display:inline-flex;align-items:center;gap:5px;direction:ltr}
   a.walnk:hover{text-decoration:none;color:#0b7d40}
   .waico{width:15px;height:15px;flex:0 0 auto}
-  a.callbtn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-inline-start:5px;
+  a.callbtn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-inline-start:12px;
     border:1px solid var(--line);border-radius:9px;color:var(--teal);background:var(--pale);vertical-align:middle;text-decoration:none}
   a.callbtn:hover{background:#e1f1f0;border-color:var(--teal)}
   a.callbtn svg{width:15px;height:15px}
