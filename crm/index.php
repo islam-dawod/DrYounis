@@ -149,6 +149,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'email'    => note_clean($_POST['email']    ?? ''),
             'interest' => note_clean($_POST['interest'] ?? ''),
             'msg'      => note_clean($_POST['msg']      ?? ''),
+            'city'     => note_clean($_POST['city']     ?? ''),
+            'fit'      => note_clean($_POST['fit']      ?? ''),
+            'question' => note_clean($_POST['question'] ?? ''),
             'source'   => note_clean($_POST['source']   ?? '') ?: 'הוספה ידנית',
             'ip'       => '',
             'manual'   => 1,
@@ -183,6 +186,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $leads[$i]['email']    = note_clean($_POST['email']    ?? '');
             $leads[$i]['interest'] = note_clean($_POST['interest'] ?? '');
             $leads[$i]['msg']      = note_clean($_POST['msg']      ?? '');
+            $leads[$i]['city']     = note_clean($_POST['city']     ?? '');
+            $leads[$i]['fit']      = note_clean($_POST['fit']      ?? '');
+            $leads[$i]['question'] = note_clean($_POST['question'] ?? '');
             $leads[$i]['source']   = note_clean($_POST['source']   ?? '') ?: ($l['source'] ?? '');
             $leads[$i]['edited']   = date('Y-m-d H:i');
             $found = true;
@@ -297,7 +303,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Disposition: attachment; filename="younis-leads.csv"');
     echo "\xEF\xBB\xBF"; // BOM لإكسل
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['תאריך','שם','טלפון','דוא״ל','טיפול','הודעה','מקור','סטטוס','הערות']);
+    fputcsv($out, ['תאריך','שם','טלפון','דוא״ל','עיר','טיפול','מה מתאים כרגע','שאלה / מידע','הודעה','מקור','סטטוס','הערות']);
     foreach ($leads as $l) {
         $lid = $l['id'] ?? '';
         $s   = $status[$lid] ?? 'new';
@@ -306,7 +312,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
             $nl[] = '[' . ($n['t'] ?? '') . '] ' . ($n['txt'] ?? '')
                   . (!empty($n['e']) ? ' (נערך ' . $n['e'] . ')' : '');
         }
-        fputcsv($out, [$l['ts']??'', $l['name']??'', $l['phone']??'', $l['email']??'', $l['interest']??'', $l['msg']??'', $l['source']??'', $ST_LBL[$s]??$s, implode(chr(10), $nl)]);
+        fputcsv($out, [$l['ts']??'', $l['name']??'', $l['phone']??'', $l['email']??'', $l['city']??'', $l['interest']??'', $l['fit']??'', $l['question']??'', $l['msg']??'', $l['source']??'', $ST_LBL[$s]??$s, implode(chr(10), $nl)]);
     }
     fclose($out); exit;
 }
@@ -397,6 +403,7 @@ foreach ($leads as $l) {
   .del{background:#fff;color:#c0392b;border-color:#eccfcb}
   .del:hover{background:#fdecea}
   td.itr{max-width:260px;white-space:normal;word-break:normal;overflow-wrap:break-word;color:#3f4f4f}
+  td.city{white-space:nowrap;color:#3f4f4f}
   .del:hover{background:#fdeceA;background:#fdecea}
   .empty{padding:50px 20px;text-align:center;color:var(--muted)}
   .src{font-size:.8rem;color:var(--muted)}
@@ -518,7 +525,7 @@ foreach ($leads as $l) {
     <?php else: ?>
     <table id="tbl">
       <thead>
-        <tr><th class="acth">פעולות</th><th>תאריך</th><th>שם</th><th>טלפון</th><th>דוא״ל</th><th>טיפול</th><th>הודעה</th><th>מקור</th><th>הערות</th><th>סטטוס</th></tr>
+        <tr><th class="acth">פעולות</th><th>תאריך</th><th>שם</th><th>טלפון</th><th>דוא״ל</th><th>עיר</th><th>טיפול</th><th>מה מתאים כרגע?</th><th>שאלה / מידע</th><th>הודעה</th><th>מקור</th><th>הערות</th><th>סטטוס</th></tr>
       </thead>
       <tbody>
         <?php foreach ($leads as $l):
@@ -526,7 +533,8 @@ foreach ($leads as $l) {
           $ntxt=''; foreach ($ns as $n) $ntxt .= ' ' . ($n['txt'] ?? ''); ?>
         <tr class="lead<?= $ns ? ' has-notes' : '' ?>" data-id="<?= h($id) ?>" data-status="<?= h($s) ?>" data-notes="<?= h(trim($ntxt)) ?>"
             data-name="<?= h($l['name']??'') ?>" data-phone="<?= h($l['phone']??'') ?>" data-email="<?= h($l['email']??'') ?>"
-            data-interest="<?= h($l['interest']??'') ?>" data-msg="<?= h($l['msg']??'') ?>" data-source="<?= h($l['source']??'') ?>">
+            data-interest="<?= h($l['interest']??'') ?>" data-msg="<?= h($l['msg']??'') ?>" data-source="<?= h($l['source']??'') ?>"
+            data-city="<?= h($l['city']??'') ?>" data-fit="<?= h($l['fit']??'') ?>" data-question="<?= h($l['question']??'') ?>">
           <td class="acts">
             <button type="button" class="edt" data-id="<?= h($id) ?>" title="עריכת פרטי הליד">✎ עריכה</button>
             <button type="button" class="del" data-id="<?= h($id) ?>" title="מחיקת הליד">🗑 מחיקה</button>
@@ -535,7 +543,10 @@ foreach ($leads as $l) {
           <td><?= h($l['name']??'') ?></td>
           <td style="white-space:nowrap"><?php if(!empty($l['phone'])): ?><a class="lnk walnk" dir="ltr" target="_blank" rel="noopener noreferrer" href="https://wa.me/<?= h(wa_number($l['phone'])) ?>" data-track="crm_wa" title="פתיחת WhatsApp עם הפונה"><svg class="waico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.4A10 10 0 1012 2zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.7 1.8c.1.2 0 .4-.1.5l-.3.4c-.1.2-.3.3-.1.6.1.3.7 1.1 1.4 1.7.9.8 1.7 1 2 1.2.2.1.4 0 .5-.1l.6-.7c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.1.1.6-.1 1z"/></svg><?= h($l['phone']) ?></a><a class="callbtn" dir="ltr" href="tel:<?= h(preg_replace('/[^0-9+]/','',$l['phone'])) ?>" data-track="crm_call" title="התקשרות לפונה" aria-label="התקשרות"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11 11 0 003.5.56 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11 11 0 00.56 3.5 1 1 0 01-.24 1z"/></svg></a><?php endif; ?></td>
           <td><?php if(!empty($l['email'])): ?><a class="lnk" dir="ltr" href="mailto:<?= h($l['email']) ?>"><?= h($l['email']) ?></a><?php endif; ?></td>
+          <td class="city"><?= h($l['city']??'') ?></td>
           <td class="itr"><?= h($l['interest']??'') ?></td>
+          <td class="itr"><?= h($l['fit']??'') ?></td>
+          <td class="msg"><?= h($l['question']??'') ?></td>
           <td class="msg"><?= h($l['msg']??'') ?></td>
           <td class="src"><?= h($l['source']??'') ?></td>
           <td><button type="button" class="nbtn" title="הצגת/הוספת הערות">📝 הערות <span class="ncount"><?= $ns ? '('.count($ns).')' : '' ?></span></button></td>
@@ -586,6 +597,7 @@ foreach ($leads as $l) {
           <label>טלפון *<input name="phone" inputmode="tel" required dir="ltr"></label>
           <label>דוא״ל<input name="email" type="email" dir="ltr"></label>
           <label>טיפול / עניין<input name="interest"></label>
+          <label>עיר<input name="city"></label>
           <label>מקור<input name="source" value="הוספה ידנית"></label>
           <label>סטטוס
             <select name="status">
@@ -593,6 +605,8 @@ foreach ($leads as $l) {
             </select>
           </label>
         </div>
+        <label>מה מתאים לכם כרגע?<input name="fit"></label>
+        <label>יש לכם שאלה או מידע שתרצו לקבל מאיתנו?<textarea name="question" rows="2"></textarea></label>
         <label>הודעה<textarea name="msg" rows="2"></textarea></label>
         <label><span id="noteLbl">הערה ראשונה (אופציונלי)</span><textarea name="note" rows="2" placeholder="למשל: פנה בטלפון, מעוניין בהשתלה"></textarea></label>
         <div class="mact">
@@ -686,6 +700,9 @@ foreach ($leads as $l) {
     lSet('phone', g('phone'));
     lSet('email', g('email'));
     lSet('interest', g('interest'));
+    lSet('city', g('city'));
+    lSet('fit', g('fit'));
+    lSet('question', g('question'));
     lSet('msg', g('msg'));
     lSet('source', tr ? g('source') : 'הוספה ידנית');
     lSet('note', '');
@@ -707,7 +724,7 @@ foreach ($leads as $l) {
     var btn = lForm.querySelector('.save'), msg = lForm.querySelector('.mmsg'),
         data = {action: lId ? 'lead_edit' : 'lead_add'};
     if(lId) data.lead_id = lId;
-    ['name','phone','email','interest','source','status','msg','note'].forEach(function(k){
+    ['name','phone','email','interest','city','fit','question','source','status','msg','note'].forEach(function(k){
       var el = lField(k);
       data[k] = el ? el.value.trim() : '';
     });

@@ -144,6 +144,7 @@ if (is_array($data) && (($data['object'] ?? '') === 'page') && !empty($data['ent
             if ($lgid === '' || fb_seen($DIR, $lgid)) continue;
 
             $name = ''; $first = ''; $last = ''; $phone = ''; $email = ''; $extra = [];
+            $city = ''; $fit = ''; $question = '';
             $formName = fb_form_name($formId, $token);
 
             // سحب بيانات الليد من Graph API
@@ -157,7 +158,8 @@ if (is_array($data) && (($data['object'] ?? '') === 'page') && !empty($data['ent
                     fb_log('graph error for ' . $lgid . ': ' . json_encode($g['error'], JSON_UNESCAPED_UNICODE));
                 } elseif (is_array($g)) {
                     foreach (($g['field_data'] ?? []) as $f) {
-                        $key = strtolower(fb_clean($f['name'] ?? ''));
+                        $rawName = fb_clean($f['name'] ?? '');
+                        $key = strtolower($rawName);
                         $val = fb_clean(implode(', ', (array)($f['values'] ?? [])));
                         if ($val === '') continue;
                         if     ($key === 'full_name')                      $name  = $val;
@@ -165,7 +167,10 @@ if (is_array($data) && (($data['object'] ?? '') === 'page') && !empty($data['ent
                         elseif ($key === 'last_name')                      $last  = $val;
                         elseif ($key === 'phone_number' || $key === 'phone') $phone = $val;
                         elseif ($key === 'email')                          $email = $val;
-                        else   $extra[] = $key . ': ' . $val;   // أسئلة مخصّصة
+                        elseif ($key === 'city' || mb_strpos($rawName, 'עיר') !== false || mb_strpos($rawName, 'יישוב') !== false || mb_strpos($rawName, 'ישוב') !== false) $city = $val;
+                        elseif (mb_strpos($rawName, 'מתאים') !== false)    $fit = $val;
+                        elseif (mb_strpos($rawName, 'שאלה') !== false || mb_strpos($rawName, 'מידע') !== false) $question = $val;
+                        else   $extra[] = $rawName . ': ' . $val;   // أسئلة مخصّصة أخرى
                     }
                 }
             } else {
@@ -186,6 +191,9 @@ if (is_array($data) && (($data['object'] ?? '') === 'page') && !empty($data['ent
                 'email'    => $email,
                 'interest' => $formName,
                 'msg'      => $msg,
+                'city'     => $city,
+                'fit'      => $fit,
+                'question' => $question,
                 'source'   => 'Facebook',
                 'ip'       => '',
                 'lead_id'  => $lgid,
@@ -226,6 +234,9 @@ fb_store($DIR, [
     'email'    => fb_clean($in['email'] ?? ''),
     'interest' => fb_clean($in['interest'] ?? ($in['form_name'] ?? '')),
     'msg'      => fb_clean($in['msg'] ?? ($in['message'] ?? '')),
+    'city'     => fb_clean($in['city'] ?? ''),
+    'fit'      => fb_clean($in['fit'] ?? ''),
+    'question' => fb_clean($in['question'] ?? ''),
     'source'   => fb_clean($in['source'] ?? '') ?: 'Facebook',
     'ip'       => $_SERVER['REMOTE_ADDR'] ?? '',
     'lead_id'  => $lgid,
