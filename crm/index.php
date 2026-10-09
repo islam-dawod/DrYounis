@@ -330,6 +330,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'token'  => !empty($c['page_token']),
         ]); exit;
     }
+    if ($_POST['action'] === 'wa_genkey') {
+        $cfg = crm_wa_cfg();
+        $cfg['intake_key'] = bin2hex(random_bytes(24));
+        crm_wa_cfg_save($cfg);
+        echo json_encode(['ok'=>true, 'intake_key'=>$cfg['intake_key']]); exit;
+    }
     if ($_POST['action'] === 'wa_save') {
         $cfg = crm_wa_cfg();
         $sec = trim((string)($_POST['secret']   ?? ''));
@@ -403,6 +409,7 @@ $status = load_status($STATUS);
 $notes  = load_notes($NOTES);
 $wa     = load_wa($WA);
 $wa_cfg = crm_wa_cfg();
+$wa_intake_url = 'https://' . ($_SERVER['HTTP_HOST'] ?? 'younisclinic.com') . '/crm/wa-intake.php';
 
 /* ترقية لمرة واحدة: الحالة «טופל» (done) استُبدلت بـ«נקבע תור» (appointment).
    أي قيمة لم تعد موجودة في قائمة الحالات تُنقل لأقرب مكافئ حتى لا يبقى ليد بحالة يتيمة. */
@@ -648,6 +655,15 @@ foreach ($leads as $l) {
       <input type="password" id="waSecret" autocomplete="off" placeholder="<?= empty($wa_cfg['secret']) ? 'הדביקו את המפתח הסודי כאן' : 'השאירו ריק כדי לא לשנות' ?>">
       <button type="button" id="waSave" class="gen">שמירת הפרטים</button>
       <span id="waSaveMsg" class="savemsg"></span>
+      <div class="fbsec">
+        <label>כתובת קליטת לידים מהבוט (Intake URL)</label>
+        <div class="cp"><code id="waInUrl"><?= h($wa_intake_url) ?></code><button type="button" data-copy="waInUrl">העתק</button></div>
+        <label>Intake Key (למפתח הבוט)</label>
+        <div class="cp"><code id="waInKey"><?= !empty($wa_cfg['intake_key']) ? h($wa_cfg['intake_key']) : '— טרם נוצר —' ?></code><button type="button" data-copy="waInKey">העתק</button></div>
+        <button type="button" id="waGenKey" class="gen"><?= !empty($wa_cfg['intake_key']) ? 'יצירת Key חדש' : 'יצירת Intake Key' ?></button>
+        <p class="gads-help">כשלקוח כותב ל־WhatsApp של המרפאה ואינו קיים כליד, הבוט אוסף את פרטיו ושולח אותם לכתובת הזו (עם ה־Key ככותרת <code>Authorization: Bearer</code>), וה־CRM יוצר ליד חדש אוטומטית. מניעת כפילות לפי טלפון.</p>
+      </div>
+
       <p class="gads-help">
         לחיצה על כפתור הבוט 🤖 שליד הטלפון שולחת לליד את הודעת הפתיחה של המרפאה ב־WhatsApp, והבוט ממשיך את השיחה. נשלח פעם אחת בלבד לכל ליד. המפתח הסודי נשמר רק בשרת ה־CRM (מחוץ לתיקיית הפרסום) ולעולם לא נחשף בדפדפן.
       </p>
@@ -900,6 +916,18 @@ foreach ($leads as $l) {
       sec.value=''; sec.placeholder='השאירו ריק כדי לא לשנות';
       var ok=document.getElementById('waSecOk'); if(ok) ok.hidden=!r.secret;
       msg.textContent='נשמר ✓'; setTimeout(function(){ msg.textContent=''; },2000);
+    });
+  });
+  // בוט WhatsApp: יצירת Intake Key
+  var waGenKey = document.getElementById('waGenKey');
+  if(waGenKey) waGenKey.addEventListener('click', function(){
+    if(document.getElementById('waInKey').textContent.indexOf('—')===-1 &&
+       !confirm('יצירת Key חדש תנתק את הבוט מהקליטה עד שתעדכנו אותו שם. להמשיך?')) return;
+    waGenKey.disabled=true; waGenKey.textContent='יוצר…';
+    post({action:'wa_genkey'}).then(function(r){
+      if(r&&r.ok){ document.getElementById('waInKey').textContent=r.intake_key; waGenKey.textContent='יצירת Key חדש'; }
+      else waGenKey.textContent='שגיאה — נסו שוב';
+      waGenKey.disabled=false;
     });
   });
   // בוט WhatsApp: שליחת הודעת פתיחה
