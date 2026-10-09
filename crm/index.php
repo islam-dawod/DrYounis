@@ -14,7 +14,8 @@ $CFG    = is_file(__DIR__ . '/config.php') ? (include __DIR__ . '/config.php') :
 $DATA   = crm_data_dir();             // مجلد ثابت خارج مجلد النشر
 $LEADS  = $DATA . '/leads.ndjson';    // سطر JSON لكل ليد
 $STATUS = $DATA . '/status.json';     // { id: "new"|"contacted"|"done"|"not_interested" }
-$NOTES  = $DATA . '/notes.json';      // { id: [ {"t":"2026-08-20 14:05","txt":"..."} , ... ] }
+$NOTES  = $DATA . '/notes.json';
+$WA     = $DATA . '/wa.json';     // { id: {result, sendStatus, deliveryStatus, ...} }
 
 /* حالات الليد — معرّفة في store.php ليستعملها الاستيراد أيضاً */
 $ST_LBL = crm_statuses();
@@ -51,6 +52,66 @@ function load_notes($f){
     return [];
 }
 function save_notes($f, $a){ @file_put_contents($f, json_encode($a, JSON_UNESCAPED_UNICODE), LOCK_EX); }
+function load_wa($f){ if (is_file($f)) { $j = json_decode(file_get_contents($f), true); if (is_array($j)) return $j; } return []; }
+function save_wa($f, $a){ @file_put_contents($f, json_encode($a, JSON_UNESCAPED_UNICODE), LOCK_EX); }
+/* نداء خادم-إلى-خادم للـWorker (يحمل السرّ) */
+function wa_http($method, $url, $secret, $payload){
+    $hdr = ['Authorization: Bearer ' . $secret, 'Accept: application/json'];
+    if ($payload !== null) $hdr[] = 'Content-Type: application/json';
+    $data = $payload !== null ? json_encode($payload, JSON_UNESCAPED_UNICODE) : null;
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST  => $method,
+            CURLOPT_HTTPHEADER     => $hdr,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        if ($data !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        $resp = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        return ['code'=>$code, 'json'=>($resp !== false ? json_decode($resp, true) : null)];
+    }
+    $ctx = stream_context_create(['http'=>[
+        'method'=>$method, 'header'=>implode("\r\n", $hdr), 'content'=>$data,
+        'timeout'=>15, 'ignore_errors'=>true,
+    ]]);
+    $resp = @file_get_contents($url, false, $ctx);
+    $code = 0;
+    if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) $code = (int)$m[1];
+    return ['code'=>$code, 'json'=>($resp !== false ? json_decode($resp, true) : null)];
+}
+/* دمج ردّ الـAPI في سجل الليد المحفوظ */
+function wa_merge($old, $body, $code){
+    $r = is_array($old) ? $old : [];
+    foreach (['result','sendStatus','messageId','providerStatus','deliveryStatus','deliveryErrorCode','reason','error','requestedAt','updatedAt'] as $k) {
+        if (array_key_exists($k, (array)$body)) $r[$k] = $body[$k];
+    }
+    $r['httpCode'] = $code;
+    return $r;
+}
+/* نص عبري مختصر لحالة الإرسال/التسليم */
+function wa_label($rec){
+    if (!$rec || empty($rec['result'])) return '';
+    $res = $rec['result']; $send = $rec['sendStatus'] ?? ''; $del = $rec['deliveryStatus'] ?? '';
+    if ($del === 'read')      return 'נקרא ✓✓';
+    if ($del === 'delivered') return 'נמסר ✓';
+    if ($del === 'failed')    return 'נכשל (' . ($rec['deliveryErrorCode'] ?? '') . ')';
+    if ($del === 'sent')      return 'בדרך…';
+    if ($res === 'accepted' || $send === 'accepted') return 'נשלח, ממתין';
+    if ($res === 'duplicate') return 'כבר נשלח';
+    if ($res === 'ineligible') {
+        $m = ['conversation_active'=>'בשיחה עם הבוט','handoff_active'=>'בטיפול נציג','recently_completed'=>'טופל לאחרונה','recently_contacted'=>'נשלח ב־24ש׳','not_in_pilot'=>'לא ברשימת הבדיקה'];
+        return $m[$rec['reason'] ?? ''] ?? 'לא זמין כעת';
+    }
+    if ($res === 'error') {
+        $m = ['send_outcome_unknown'=>'לא ודאי — בדקו ב־WhatsApp','automation_off'=>'השליחה מושהית','whatsapp_unavailable'=>'WhatsApp לא מחובר'];
+        return $m[$rec['error'] ?? ''] ?? 'שגיאה';
+    }
+    return '';
+}
 /* تنقية نص الملاحظة: يحفظ الأسطر الجديدة والـtab ويحذف بقية أحرف التحكّم */
 function note_clean($v){
     $v = trim((string)$v);
@@ -269,6 +330,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             'token'  => !empty($c['page_token']),
         ]); exit;
     }
+    if ($_POST['action'] === 'wa_save') {
+        $cfg = crm_wa_cfg();
+        $sec = trim((string)($_POST['secret']   ?? ''));
+        $bu  = trim((string)($_POST['base_url'] ?? ''));
+        if ($sec !== '') $cfg['secret'] = $sec;            // فارغ = أبقِ القديم
+        if ($bu  !== '') $cfg['base_url'] = rtrim($bu, '/');
+        crm_wa_cfg_save($cfg);
+        echo json_encode(['ok'=>true, 'secret'=>!empty($cfg['secret']), 'base_url'=>$cfg['base_url']]); exit;
+    }
+    if ($_POST['action'] === 'wa_send' || $_POST['action'] === 'wa_status') {
+        $cfg = crm_wa_cfg();
+        $secret = (string)($cfg['secret'] ?? '');
+        $base   = rtrim((string)($cfg['base_url'] ?? ''), '/');
+        if ($secret === '' || $base === '') { echo json_encode(['ok'=>false,'error'=>'not_configured']); exit; }
+
+        // ابحث عن الليد بالمعرّف الداخلي
+        $lead = null;
+        foreach (load_leads($LEADS) as $l0) { if (($l0['id'] ?? '') === $id) { $lead = $l0; break; } }
+        if (!$lead) { echo json_encode(['ok'=>false,'error'=>'lead_not_found']); exit; }
+
+        // معرّف الليد لـAPI = معرّفنا الداخلي (يطابق النمط المطلوب)
+        $leadId = $id;
+        if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/', $leadId) || strpos($leadId, 'wa-staff-') === 0) {
+            echo json_encode(['ok'=>false,'error'=>'bad_lead_id']); exit;
+        }
+
+        $waAll = load_wa($WA);
+
+        if ($_POST['action'] === 'wa_status') {
+            $r = wa_http('GET', $base . '/crm/v1/whatsapp-opening/' . rawurlencode($leadId), $secret, null);
+            $body = is_array($r['json']) ? $r['json'] : [];
+            if (($body['result'] ?? '') === 'found' || ($body['result'] ?? '') === 'not_found') {
+                $waAll[$id] = wa_merge($waAll[$id] ?? [], $body, $r['code']);
+                save_wa($WA, $waAll);
+            }
+            echo json_encode(['ok'=>true, 'rec'=>$waAll[$id] ?? ['result'=>'not_found'], 'label'=>wa_label($waAll[$id] ?? [])]); exit;
+        }
+
+        // wa_send — تحقّق الهاتف + الموافقة
+        $phone = wa_number($lead['phone'] ?? '');            // صيغة دولية بلا + ولا صفر بادئ
+        if (strlen($phone) < 7 || strlen($phone) > 15) { echo json_encode(['ok'=>false,'error'=>'bad_phone']); exit; }
+
+        // الموافقة: ليدات نماذج الموقع مُوافَق عليها (خانة إلزامية). غيرها تتطلّب تأكيد الموظّف.
+        $hasConsent = !empty($lead['consent']);
+        if (!$hasConsent && empty($_POST['confirm'])) { echo json_encode(['ok'=>false,'error'=>'need_consent_confirm']); exit; }
+
+        $payload = ['leadId'=>$leadId, 'phone'=>'+'.$phone, 'contactConsent'=>true];
+        $r = wa_http('POST', $base . '/crm/v1/whatsapp-opening', $secret, $payload);
+        $body = is_array($r['json']) ? $r['json'] : [];
+
+        $rec = wa_merge($waAll[$id] ?? [], $body, $r['code']);
+        if (empty($body)) { $rec['result'] = 'error'; $rec['error'] = 'no_response'; }
+        $rec['at'] = date('Y-m-d H:i');
+        $waAll[$id] = $rec;
+        save_wa($WA, $waAll);
+
+        $ok = in_array($r['code'], [200], true) && in_array(($body['result'] ?? ''), ['accepted','duplicate'], true);
+        echo json_encode(['ok'=>$ok, 'code'=>$r['code'], 'rec'=>$rec, 'label'=>wa_label($rec),
+                          'error'=>$ok ? null : (($body['reason'] ?? $body['error']) ?? 'error')]); exit;
+    }
     if ($_POST['action'] === 'gads_genkey') {
         $key = bin2hex(random_bytes(20));
         @file_put_contents($DATA . '/gads_key.txt', $key, LOCK_EX);
@@ -280,6 +401,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $leads  = load_leads($LEADS);
 $status = load_status($STATUS);
 $notes  = load_notes($NOTES);
+$wa     = load_wa($WA);
+$wa_cfg = crm_wa_cfg();
 
 /* ترقية لمرة واحدة: الحالة «טופל» (done) استُبدلت بـ«נקבע תור» (appointment).
    أي قيمة لم تعد موجودة في قائمة الحالات تُنقل لأقرب مكافئ حتى لا يبقى ليد بحالة يتيمة. */
@@ -387,6 +510,14 @@ foreach ($leads as $l) {
     border:1px solid var(--line);border-radius:9px;color:var(--teal);background:var(--pale);vertical-align:middle;text-decoration:none}
   a.callbtn:hover{background:#e1f1f0;border-color:var(--teal)}
   a.callbtn svg{width:15px;height:15px}
+  .botbtn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-inline-start:5px;
+    border:1px solid #cdefda;border-radius:9px;color:#0f8f4c;background:#e7f9ee;vertical-align:middle;cursor:pointer}
+  .botbtn:hover{background:#d6f3e2;border-color:#0f8f4c}
+  .botbtn:disabled{opacity:.55;cursor:default}
+  .botbtn.sent{color:#1857b8;background:#e5f0ff;border-color:#bcd6ff}
+  .botbtn svg{width:16px;height:16px}
+  .wast{font-size:.72rem;color:var(--muted);margin-inline-start:6px;white-space:nowrap}
+  #waBase,#waSecret{width:100%;max-width:560px;display:block;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:.88rem;direction:ltr;text-align:left;background:#fff}
   .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.78rem;font-weight:700}
   select.st{padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-family:inherit;font-size:.85rem;cursor:pointer;max-width:165px}
   .st-new{background:#fff4e0;color:#a86400}
@@ -508,6 +639,21 @@ foreach ($leads as $l) {
     </div>
   </details>
 
+  <details class="gads">
+    <summary>בוט WhatsApp — שליחת הודעת פתיחה אוטומטית לליד</summary>
+    <div class="gads-body">
+      <label>כתובת השרת (Base URL)</label>
+      <input type="text" id="waBase" dir="ltr" value="<?= h($wa_cfg['base_url'] ?? '') ?>">
+      <label style="margin-top:10px">CRM API Secret <span id="waSecOk" class="okmark"<?= empty($wa_cfg['secret']) ? ' hidden' : '' ?>>שמור ✓</span></label>
+      <input type="password" id="waSecret" autocomplete="off" placeholder="<?= empty($wa_cfg['secret']) ? 'הדביקו את המפתח הסודי כאן' : 'השאירו ריק כדי לא לשנות' ?>">
+      <button type="button" id="waSave" class="gen">שמירת הפרטים</button>
+      <span id="waSaveMsg" class="savemsg"></span>
+      <p class="gads-help">
+        לחיצה על כפתור הבוט 🤖 שליד הטלפון שולחת לליד את הודעת הפתיחה של המרפאה ב־WhatsApp, והבוט ממשיך את השיחה. נשלח פעם אחת בלבד לכל ליד. המפתח הסודי נשמר רק בשרת ה־CRM (מחוץ לתיקיית הפרסום) ולעולם לא נחשף בדפדפן.
+      </p>
+    </div>
+  </details>
+
   <div class="toolbar">
     <input type="search" id="q" placeholder="חיפוש לפי שם / טלפון / דוא״ל / הודעה…">
     <select id="fstatus">
@@ -541,7 +687,7 @@ foreach ($leads as $l) {
           </td>
           <td style="white-space:nowrap"><?= h($l['ts']??'') ?></td>
           <td><?= h($l['name']??'') ?></td>
-          <td style="white-space:nowrap"><?php if(!empty($l['phone'])): ?><a class="lnk walnk" dir="ltr" target="_blank" rel="noopener noreferrer" href="https://wa.me/<?= h(wa_number($l['phone'])) ?>" data-track="crm_wa" title="פתיחת WhatsApp עם הפונה"><svg class="waico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.4A10 10 0 1012 2zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.7 1.8c.1.2 0 .4-.1.5l-.3.4c-.1.2-.3.3-.1.6.1.3.7 1.1 1.4 1.7.9.8 1.7 1 2 1.2.2.1.4 0 .5-.1l.6-.7c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.1.1.6-.1 1z"/></svg><?= h($l['phone']) ?></a><a class="callbtn" dir="ltr" href="tel:<?= h(preg_replace('/[^0-9+]/','',$l['phone'])) ?>" data-track="crm_call" title="התקשרות לפונה" aria-label="התקשרות"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11 11 0 003.5.56 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11 11 0 00.56 3.5 1 1 0 01-.24 1z"/></svg></a><?php endif; ?></td>
+          <td style="white-space:nowrap"><?php if(!empty($l['phone'])): ?><a class="lnk walnk" dir="ltr" target="_blank" rel="noopener noreferrer" href="https://wa.me/<?= h(wa_number($l['phone'])) ?>" data-track="crm_wa" title="פתיחת WhatsApp עם הפונה"><svg class="waico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-8.5 15.2L2 22l4.9-1.4A10 10 0 1012 2zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.5.1-1 .1-1.6-.1-.4-.1-.9-.3-1.5-.6-2.6-1.1-4.3-3.8-4.4-4-.1-.2-1-1.4-1-2.6s.6-1.8.9-2.1c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.7 1.8c.1.2 0 .4-.1.5l-.3.4c-.1.2-.3.3-.1.6.1.3.7 1.1 1.4 1.7.9.8 1.7 1 2 1.2.2.1.4 0 .5-.1l.6-.7c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.2.4.3.1.1.1.6-.1 1z"/></svg><?= h($l['phone']) ?></a><a class="callbtn" dir="ltr" href="tel:<?= h(preg_replace('/[^0-9+]/','',$l['phone'])) ?>" data-track="crm_call" title="התקשרות לפונה" aria-label="התקשרות"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11 11 0 003.5.56 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11 11 0 00.56 3.5 1 1 0 01-.24 1z"/></svg></a><?php $wr=$wa[$id]??[]; $wl=wa_label($wr); ?><button type="button" class="botbtn<?= $wl!==''?' sent':'' ?>" data-id="<?= h($id) ?>" data-consent="<?= !empty($l['consent'])?'1':'0' ?>" title="שליחת הודעת פתיחה של הבוט ב־WhatsApp" aria-label="בוט WhatsApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 8V4M9 3h6"/><circle cx="9" cy="13.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="15" cy="13.5" r="1.1" fill="currentColor" stroke="none"/></svg></button><span class="wast" data-id="<?= h($id) ?>"><?= h($wl) ?></span><?php endif; ?></td>
           <td><?php if(!empty($l['email'])): ?><a class="lnk" dir="ltr" href="mailto:<?= h($l['email']) ?>"><?= h($l['email']) ?></a><?php endif; ?></td>
           <td class="city"><?= h($l['city']??'') ?></td>
           <td class="itr"><?= h($l['interest']??'') ?></td>
@@ -738,6 +884,52 @@ foreach ($leads as $l) {
                       : (r && r.error === 'no_name')   ? 'נא למלא שם'
                       : (r && r.error === 'not_found') ? 'הליד לא נמצא — רעננו את הדף'
                       : 'שגיאה — נסו שוב';
+    });
+  });
+
+  // בוט WhatsApp: שמירת הסוד
+  var waSave = document.getElementById('waSave');
+  if(waSave) waSave.addEventListener('click', function(){
+    var sec=document.getElementById('waSecret'), base=document.getElementById('waBase'),
+        msg=document.getElementById('waSaveMsg');
+    if(!sec.value.trim() && !base.value.trim()){ msg.textContent='אין מה לשמור'; return; }
+    waSave.disabled=true; msg.textContent='שומר…';
+    post({action:'wa_save', secret:sec.value.trim(), base_url:base.value.trim()}).then(function(r){
+      waSave.disabled=false;
+      if(!(r&&r.ok)){ msg.textContent='שגיאה — נסו שוב'; return; }
+      sec.value=''; sec.placeholder='השאירו ריק כדי לא לשנות';
+      var ok=document.getElementById('waSecOk'); if(ok) ok.hidden=!r.secret;
+      msg.textContent='נשמר ✓'; setTimeout(function(){ msg.textContent=''; },2000);
+    });
+  });
+  // בוט WhatsApp: שליחת הודעת פתיחה
+  function waErr(e){
+    var m={not_configured:'הבוט לא מוגדר — הזינו Secret בהגדרות למעלה',
+           bad_phone:'מספר טלפון לא תקין',lead_not_found:'הליד לא נמצא',
+           need_consent_confirm:'',no_response:'אין תשובה מהשרת',
+           recently_contacted:'כבר נשלח ב־24 השעות האחרונות',conversation_active:'הליד כבר בשיחה עם הבוט',
+           not_in_pilot:'המספר אינו ברשימת הבדיקה המאושרת'};
+    return (e&&m[e]!==undefined)?m[e]:'שגיאה — נסו שוב';
+  }
+  document.querySelectorAll('.botbtn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var id=b.getAttribute('data-id'),
+          consent=b.getAttribute('data-consent')==='1',
+          st=document.querySelector('.wast[data-id="'+id+'"]');
+      var confirmNeeded = !consent;
+      if(confirmNeeded && !confirm('לא תועד אישור WhatsApp לליד זה. לשלוח בכל זאת את הודעת הפתיחה של הבוט?')) return;
+      if(consent && !confirm('לשלוח לליד את הודעת הפתיחה של הבוט ב־WhatsApp?')) return;
+      b.disabled=true; if(st) st.textContent='שולח…';
+      post({action:'wa_send', id:id, confirm: confirmNeeded?'1':'0'}).then(function(r){
+        if(r && r.ok){
+          b.classList.add('sent');
+          if(st) st.textContent=r.label||'נשלח';
+          // השאר מושבת אחרי שליחה מוצלחת
+        } else {
+          b.disabled=false;
+          if(st) st.textContent = (r&&r.label) ? r.label : waErr(r&&r.error);
+        }
+      }).catch(function(){ b.disabled=false; if(st) st.textContent='שגיאה'; });
     });
   });
 

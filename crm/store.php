@@ -46,6 +46,30 @@ function crm_fb_cfg_save($c) {
     @chmod(crm_fb_cfg_file(), 0600);
 }
 
+/* ---------------------------------------------------------------
+   إعداد بوت WhatsApp (الـWorker الخارجي) — يُحفظ خارج مجلد النشر، لا في المستودع:
+   { secret, base_url }. الاستدعاء خادم-إلى-خادم فقط؛ السرّ لا يصل المتصفح أبداً.
+   --------------------------------------------------------------- */
+function crm_wa_cfg_file() { return crm_data_dir() . '/wa_config.json'; }
+
+function crm_wa_cfg() {
+    $c = [];
+    $f = crm_wa_cfg_file();
+    if (is_file($f)) {
+        $j = json_decode((string)file_get_contents($f), true);
+        if (is_array($j)) $c = $j;
+    }
+    if (empty($c['base_url'])) {
+        $c['base_url'] = 'https://whatsapp-dental-intake-production.younis-clinic-dev.workers.dev';
+    }
+    return $c;
+}
+
+function crm_wa_cfg_save($c) {
+    @file_put_contents(crm_wa_cfg_file(), json_encode($c, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
+    @chmod(crm_wa_cfg_file(), 0600);
+}
+
 function crm_data_dir() {
     static $dir = null;
     if ($dir !== null) return $dir;

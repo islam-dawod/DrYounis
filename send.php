@@ -88,6 +88,8 @@ $lead = [
     'fit'      => clean($_POST['fit'] ?? ($_POST['current'] ?? '')),
     'question' => clean($_POST['question'] ?? ''),
     'source'   => clean($_POST['source'] ?? '') ?: 'אתר ראשי',
+    'consent'         => true,                               // خانة الموافقة إلزامية في النموذج
+    'consent_version' => clean($_POST['consent_version'] ?? ''),
     'ip'       => $_SERVER['REMOTE_ADDR'] ?? '',
 ];
 if (function_exists('crm_data_dir')) {
