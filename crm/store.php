@@ -23,6 +23,8 @@ function crm_statuses() {
         'treated'        => 'קבל טיפול',
         'not_interested' => 'לא מעוניין',
         'no_answer'      => 'לא זמין / אין מענה',
+        'callback'       => 'לחזור למטופל',
+        'not_suitable'   => 'לא מתאים',
     ];
 }
 
