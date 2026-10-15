@@ -532,8 +532,8 @@ foreach ($leads as $l) {
   .st-appointment{background:#efe7fb;color:#5b3a9e}
   .st-treated{background:#e4f6ec;color:#1c7a45}
   .st-no_answer{background:#f6ece9;color:#8a5148}
-  .st-callback{background:#fde8e6;color:#c0392b}
-  .st-not_suitable{background:#6a3fb0;color:#fff;font-weight:800}
+  .st-callback{background:#6a3fb0;color:#fff;font-weight:800}
+  .st-not_suitable{background:#c0392b;color:#fff;font-weight:800}
   td.acts{white-space:nowrap;position:sticky;right:0;background:#fff;box-shadow:-6px 0 8px -8px rgba(0,0,0,.25);z-index:2}
   tr:hover td.acts{background:#fafdfd}
   th.acth{position:sticky;right:0;z-index:3}
