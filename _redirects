@@ -40,3 +40,7 @@
 /instructions/:slug          /instruction-:slug.html   200
 # Digital card short/alias
 /card/tahsin                 /card.html                200
+
+# CRM dashboard (Pages Function at /crm/index.php)
+/crm /crm/index.php 302
+/crm/ /crm/index.php 302
