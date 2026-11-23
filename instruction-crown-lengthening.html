@@ -660,7 +660,7 @@ var af=document.getElementById('apptForm');
 if(af){af.addEventListener('submit',function(e){e.preventDefault();if(!af.checkValidity()){af.reportValidity();return}
 var btn=af.querySelector('button[type=submit]'),orig=btn.textContent,m=document.getElementById('formMsg');
 btn.disabled=true;btn.textContent='שולחים את הפנייה…';
-fetch('send.php',{method:'POST',body:new FormData(af)})
+fetch('/send.php',{method:'POST',body:new FormData(af)})
 .then(function(r){return r.json().catch(function(){return{ok:r.ok}})})
 .then(function(d){if(d&&d.ok){if(m){m.innerHTML='<b>תודה על פנייתכם!</b><br>פנייתכם התקבלה בהצלחה. צוות המרפאה של ד״ר תחסין יונס ייצור איתכם קשר בהקדם לתיאום פגישת הייעוץ.';m.classList.add('show')}btn.textContent='נשלח בהצלחה ✓';af.reset()}else{throw new Error()}})
 .catch(function(){btn.disabled=false;btn.textContent=orig;if(m){m.textContent='לא הצלחנו לשלוח את הפנייה כעת. אפשר לנסות שוב או לפנות אלינו בטלפון או ב־WhatsApp במספר 054-334-5333.';m.style.background='rgba(200,60,60,.08)';m.style.borderColor='rgba(200,60,60,.4)';m.style.color='#b23';m.classList.add('show')}});

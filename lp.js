@@ -60,7 +60,7 @@
       if (!form.checkValidity()) { form.reportValidity(); return; }
       var orig = btn ? btn.textContent : '';
       if (btn) { btn.disabled = true; btn.textContent = 'שולחים את הפנייה…'; }
-      fetch('send.php', { method: 'POST', body: new FormData(form) })
+      fetch('/send.php', { method: 'POST', body: new FormData(form) })
         .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
         .then(function (d) {
           if (d && d.ok) {
