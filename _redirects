@@ -1,0 +1,42 @@
+# Cloudflare Pages redirects/rewrites — replaces .htaccess rules 1 & 2b.
+# Clean URLs (/page from /page.html) are handled by Pages automatically.
+# First match wins, so specific rules come before generic ones.
+
+# ---- Old WordPress URLs -> new pages (301) ----
+/index.html            /                                   301
+/index                 /                                   301
+/contact-us            /contact                            301
+/dental-implant        /treatments/dental-implants         301
+/7asho                 /treatments/filling                 301
+/inlay-onlay           /treatments/inlay-onlay             301
+/tooth-removal         /treatments/tooth-extraction        301
+/whitening             /treatments/teeth-whitening         301
+/root                  /treatments/root-canal              301
+/lethah3elaj           /treatments/periodontal-treatment   301
+/scaling-deep-cleaning /treatments/periodontal-treatment   301
+/qoshor                /treatments/veneers                 301
+/mouth                 /treatments/crowns-bridges          301
+/zeraah                /instructions/dental-implant        301
+/khale3                /instructions/surgical-extraction   301
+/jeob                  /instructions/sinus-lift            301
+/lethah                /instructions/periodontal-surgery   301
+/taj                   /instructions/crown-lengthening     301
+/jeraha                /instructions/regenerative-surgery  301
+/tarqe3                /instructions/gum-graft             301
+/white                 /instructions/whitening             301
+/tarmem                /instructions/removable-prosthesis  301
+/clean                 /instructions/oral-hygiene          301
+/bruxism               /treatments                         301
+/serviceshe            /treatments                         301
+/instruction-implant   /instructions/dental-implant        301
+
+# ---- Approved nested routes -> flat page files (internal rewrite, 200) ----
+# Aliases where the slug differs from the file name (must precede the generic rule):
+/treatments/dental-implants  /treatment-implant.html   200
+/treatments/crowns-bridges   /treatment-crowns.html    200
+/treatments/full-mouth       /treatment-full-mouth.html 200
+# Generic: /treatments/<slug> -> /treatment-<slug>.html , /instructions/<slug> -> /instruction-<slug>.html
+/treatments/:slug            /treatment-:slug.html     200
+/instructions/:slug          /instruction-:slug.html   200
+# Digital card short/alias
+/card/tahsin                 /card.html                200
