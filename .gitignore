@@ -13,3 +13,13 @@ leads.log
 crm/data/*
 !crm/data/.htaccess
 !crm/data/index.php
+
+# Real CRM data + secrets — NEVER commit (migrated to Cloudflare D1/secrets)
+leads.ndjson
+status.json
+notes.json
+wa.json
+fb_config.json
+wa_config.json
+gads_key.txt
+*.ndjson
