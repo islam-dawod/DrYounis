@@ -1,0 +1,12 @@
+# Files NOT to publish as public static assets on Cloudflare Pages.
+# The PHP backend stays in the repo for Hostinger during the transition,
+# but must never be served as downloadable text on Pages.
+# (Pages serves /functions separately — JS there is NOT affected by this file.)
+*.php
+crm/*.php
+crm/config.php
+crm/data
+*.sql
+*.toml
+*.md
+docs

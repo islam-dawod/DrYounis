@@ -2,7 +2,6 @@
 # The static site is the repo root; server code lives in /functions.
 name = "dryounis"
 compatibility_date = "2025-11-01"
-pages_build_output_dir = "."
 
 # D1 database binding — exposed to Functions as env.DB.
 # After `wrangler d1 create younis-crm`, paste the returned database_id below,
@@ -10,4 +9,4 @@ pages_build_output_dir = "."
 [[d1_databases]]
 binding = "DB"
 database_name = "younis-crm"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "16ff51a5-37d4-4c17-89b9-c99c19ada382"
