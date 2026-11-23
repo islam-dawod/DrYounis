@@ -174,6 +174,7 @@ tr.nrow>td{background:#fbfdfd}.notes{display:flex;flex-direction:column;gap:10px
 <div id="app" class="wrap"></div>
 <script id="crmdata" type="application/json">${blob}</script>
 <script src="/crm-app.js?v=1"></script>
+<script src="/crm-import.js?v=1"></script>
 </body></html>`;
 }
 
@@ -324,6 +325,71 @@ export async function onRequestPost({ request, env }) {
     return json({ ok, label: waLabel(rec || {}), error: ok ? null : ((bodyj && (bodyj.reason || bodyj.error)) || 'error') });
   }
 
+  if (action === 'import') {
+    var rows = Array.isArray(body.rows) ? body.rows : [];
+    if (!rows.length) return json({ ok: false, error: 'no_rows' });
+    if (rows.length > 5000) rows = rows.slice(0, 5000);
+    const skipDup = !!body.skip_dup;
+    const defSource = clean(body.default_source) || 'ייבוא מקובץ';
+    const defStatus = ST_KEYS.includes(body.default_status) ? body.default_status : 'new';
+    const lblToKey = {}; for (const k of ST_KEYS) { lblToKey[k] = k; lblToKey[ST_LBL[k]] = k; }
+
+    const ex = (await D.prepare('SELECT phone_key FROM leads').all()).results || [];
+    const existing = new Set(ex.map(r => r.phone_key).filter(Boolean));
+
+    const impPhone = (v) => {
+      let d = String(v == null ? '' : v).replace(/^\s*p\s*:\s*/i, '').trim();
+      let digits = d.replace(/\D/g, '');
+      if (/^5\d{8}$/.test(digits)) return '0' + digits;        // lost leading zero
+      return d;
+    };
+    const LC = ['id','ts','name','phone','phone_key','email','interest','msg','city','fit','question','source','ip','status','consent','inbound','manual','imported','wa_id','lead_id','form_id','page_id','ad_id','gclid','campaign_id','edited'];
+    let added = 0, dup = 0, bad = 0, i = 0; const stmts = []; const newIds = []; const noteStmts = [];
+    for (const r of rows) {
+      let name = clean(r.name || '');
+      let phone = impPhone(r.phone || '');
+      if (!name && !phone) { bad++; continue; }
+      if (!name) name = 'ללא שם';
+      const pk = phoneKey(phone);
+      if (skipDup && pk && existing.has(pk)) { dup++; continue; }
+      if (pk) existing.add(pk);
+      const lid = newId() + (i++).toString(36);
+      const stRaw = clean(r.status || '');
+      const st = lblToKey[stRaw] || defStatus;
+      const obj = { id: lid, ts: clean(r.ts || '') || tsNow(), name, phone, phone_key: pk,
+        email: clean(r.email || ''), interest: clean(r.interest || ''), msg: clean(r.msg || ''),
+        city: clean(r.city || ''), fit: clean(r.fit || ''), question: clean(r.question || ''),
+        source: clean(r.source || '') || defSource, ip: '', status: st,
+        consent: 0, inbound: 0, manual: 0, imported: 1, wa_id: '', lead_id: '', form_id: '',
+        page_id: '', ad_id: '', gclid: '', campaign_id: '', edited: '' };
+      stmts.push(D.prepare('INSERT INTO leads (' + LC.join(',') + ') VALUES (' + LC.map(() => '?').join(',') + ')').bind(...LC.map(c => obj[c])));
+      newIds.push(lid);
+      const note = clean(r.note || '');
+      if (note) noteStmts.push(D.prepare('INSERT INTO notes (id,lead_id,t,txt) VALUES (?,?,?,?)').bind(shortId(), lid, tsNow(), note));
+      added++;
+    }
+    const all = stmts.concat(noteStmts);
+    for (let j = 0; j < all.length; j += 50) await D.batch(all.slice(j, j + 50));
+    if (newIds.length) await env.DB.prepare('INSERT INTO kv (k,v) VALUES (?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')
+      .bind('import_last', JSON.stringify({ at: tsNow(), ids: newIds })).run();
+    return json({ ok: true, added, dup, bad });
+  }
+  if (action === 'import_undo') {
+    const row = await D.prepare('SELECT v FROM kv WHERE k=?').bind('import_last').first();
+    if (!row || !row.v) return json({ ok: false, error: 'nothing' });
+    let ids = []; try { ids = (JSON.parse(row.v).ids) || []; } catch (e) {}
+    if (!ids.length) return json({ ok: false, error: 'nothing' });
+    for (let j = 0; j < ids.length; j += 50) {
+      const chunk = ids.slice(j, j + 50);
+      const qs = chunk.map(() => '?').join(',');
+      await D.batch([
+        D.prepare('DELETE FROM leads WHERE id IN (' + qs + ')').bind(...chunk),
+        D.prepare('DELETE FROM notes WHERE lead_id IN (' + qs + ')').bind(...chunk),
+      ]);
+    }
+    await D.prepare('DELETE FROM kv WHERE k=?').bind('import_last').run();
+    return json({ ok: true, undone: ids.length });
+  }
   return json({ ok: false, error: 'unknown_action' });
 }
 
