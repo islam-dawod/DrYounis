@@ -34,6 +34,10 @@
     if (typeof gtag === 'function') {
       gtag('event', 'ads_conversion___1', {});
     }
+    // Meta Pixel — Lead conversion on successful registration
+    if (typeof fbq === 'function') {
+      fbq('track', 'Lead');
+    }
   }
   function closeThanks() {
     if (!thanks) return;
