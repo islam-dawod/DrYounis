@@ -847,7 +847,7 @@ var btn=af.querySelector('button[type=submit]'),orig=btn.textContent,m=document.
 btn.disabled=true;btn.textContent='שולחים את הפנייה…';
 fetch('/send.php',{method:'POST',body:new FormData(af)})
 .then(function(r){return r.json().catch(function(){return{ok:r.ok}})})
-.then(function(d){if(d&&d.ok){if(m){m.innerHTML='<b>תודה על פנייתכם!</b><br>פנייתכם התקבלה בהצלחה. צוות המרפאה של ד״ר תחסין יונס ייצור איתכם קשר בהקדם לתיאום פגישת הייעוץ.';m.classList.add('show')}btn.textContent='נשלח בהצלחה ✓';af.reset()}else{throw new Error()}})
+.then(function(d){if(d&&d.ok){if(m){m.innerHTML='<b>תודה על פנייתכם!</b><br>פנייתכם התקבלה בהצלחה. צוות המרפאה של ד״ר תחסין יונס ייצור איתכם קשר בהקדם לתיאום פגישת הייעוץ.';m.classList.add('show')}btn.textContent='נשלח בהצלחה ✓';af.reset();if(typeof fbq!=='function'){!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','1477549034520373')}if(typeof fbq==='function'){fbq('track','Lead')}}else{throw new Error()}})
 .catch(function(){btn.disabled=false;btn.textContent=orig;if(m){m.textContent='לא הצלחנו לשלוח את הפנייה כעת. אפשר לנסות שוב או לפנות אלינו בטלפון או ב־WhatsApp במספר 054-334-5333.';m.style.background='rgba(200,60,60,.08)';m.style.borderColor='rgba(200,60,60,.4)';m.style.color='#b23';m.classList.add('show')}});
 });}
 // instructions search + filter
