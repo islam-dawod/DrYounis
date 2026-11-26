@@ -26,7 +26,7 @@
     // Replace the form with an inline thank-you message (no popup)
     var f = document.getElementById('lpForm');
     var it = document.getElementById('lpThanks');
-    if (f) f.hidden = true;
+    if (f) { f.hidden = true; f.style.display = 'none'; }
     if (it) {
       it.hidden = false;
       try { it.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
