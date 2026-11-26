@@ -801,6 +801,14 @@
         <div class="form-msg" id="formMsg"></div>
         <p class="form-disc">המידע באתר הוא כללי ואינו מחליף בדיקה או ייעוץ רפואי אישי.</p>
       </form>
+      <div id="apptThanks" role="status" aria-live="polite" hidden
+           style="text-align:center;padding:40px 26px;background:#EFF8F7;border:1px solid #d7ebe9;border-radius:16px">
+        <span aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:62px;height:62px;border-radius:50%;background:#e4f6ec;color:#1c7a45;margin:0 auto 14px">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </span>
+        <h3 style="margin:0 0 8px;color:#0B6F70;font-size:1.3rem">תודה על פנייתכם!</h3>
+        <p style="margin:0;color:#3f4f4f;font-size:1rem;line-height:1.6">פנייתכם התקבלה בהצלחה. צוות המרפאה של ד״ר תחסין יונס ייצור איתכם קשר בהקדם לתיאום פגישת הייעוץ.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -847,7 +855,7 @@ var btn=af.querySelector('button[type=submit]'),orig=btn.textContent,m=document.
 btn.disabled=true;btn.textContent='שולחים את הפנייה…';
 fetch('/send.php',{method:'POST',body:new FormData(af)})
 .then(function(r){return r.json().catch(function(){return{ok:r.ok}})})
-.then(function(d){if(d&&d.ok){if(m){m.innerHTML='<b>תודה על פנייתכם!</b><br>פנייתכם התקבלה בהצלחה. צוות המרפאה של ד״ר תחסין יונס ייצור איתכם קשר בהקדם לתיאום פגישת הייעוץ.';m.classList.add('show')}btn.textContent='נשלח בהצלחה ✓';af.reset();if(typeof fbq!=='function'){!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','1477549034520373')}if(typeof fbq==='function'){fbq('track','Lead')}}else{throw new Error()}})
+.then(function(d){if(d&&d.ok){af.style.display='none';var _it=document.getElementById('apptThanks');if(_it){_it.hidden=false;try{_it.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){}}af.reset();if(typeof fbq!=='function'){!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','1477549034520373')}if(typeof fbq==='function'){fbq('track','Lead')}}else{throw new Error()}})
 .catch(function(){btn.disabled=false;btn.textContent=orig;if(m){m.textContent='לא הצלחנו לשלוח את הפנייה כעת. אפשר לנסות שוב או לפנות אלינו בטלפון או ב־WhatsApp במספר 054-334-5333.';m.style.background='rgba(200,60,60,.08)';m.style.borderColor='rgba(200,60,60,.4)';m.style.color='#b23';m.classList.add('show')}});
 });}
 // instructions search + filter
