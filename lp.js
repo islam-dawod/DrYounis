@@ -23,13 +23,16 @@
   var thanks = document.getElementById('thanksModal');
   var lastFocus = null;
   function openThanks() {
-    if (!thanks) return;
-    lastFocus = document.activeElement;
-    thanks.classList.add('open');
-    thanks.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    var ok = thanks.querySelector('.thanks-ok');
-    if (ok) ok.focus();
+    // Replace the form with an inline thank-you message (no popup)
+    var f = document.getElementById('lpForm');
+    var it = document.getElementById('lpThanks');
+    if (f) f.hidden = true;
+    if (it) {
+      it.hidden = false;
+      try { it.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+      var hh = it.querySelector('h3');
+      if (hh) { hh.setAttribute('tabindex', '-1'); try { hh.focus(); } catch (e) {} }
+    }
     // Google Ads conversion — fires when the thank-you popup is shown (successful registration)
     if (typeof gtag === 'function') {
       gtag('event', 'ads_conversion___1', {});
